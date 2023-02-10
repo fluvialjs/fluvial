@@ -1,56 +1,58 @@
 {
-  "name": "fluvial-root",
-  "version": "0.1.0",
-  "description": "Fluvial:  A light http/2 server framework, similar to Express",
-  "main": "dist/index.js",
-  "files": [
-    "dist/**/*",
-    "README.md"
-  ],
-  "type": "module",
-  "scripts": {
-    "preversion": "pnpm test",
-    "prepublish": "pnpm -r version && pnpm -r compile",
-    "test": "vitest",
-    "test:coverage": "pnpm test --coverage"
-  },
-  "keywords": [
-    "http/2",
-    "http2",
-    "stream",
-    "server",
-    "back-end",
-    "backend"
-  ],
-  "author": {
-    "email": "sskeen9@gmail.com",
-    "name": "Samuel Skeen",
-    "url": "https://github.com/cwadrupldijjit"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/fluvial/fluvial.git"
-  },
-  "license": "GPL-3.0-only",
-  "devDependencies": {
-    "@types/express": "^4.17.16",
-    "@types/mime": "^3.0.1",
-    "@types/node": "^18.11.18",
-    "@vitest/coverage-c8": "^0.28.1",
-    "pnpm": "^7.26.0",
-    "rimraf": "^4.1.2",
-    "ts-node": "^10.9.1",
-    "typescript": "^4.9.4",
-    "vite": "^4.0.4",
-    "vitest": "^0.28.1"
-  },
-  "dependencies": {
-    "mime": "^3.0.0"
-  },
-  "workspaces": {
-    "packages": [
-      "packages/core",
-      "packages/middleware"
-    ]
-  }
+    "name": "fluvial-root",
+    "version": "0.1.0-alpha.1",
+    "description": "Fluvial:  A light http/2 server framework, similar to Express",
+    "main": "dist/index.js",
+    "files": [
+        "dist/**/*",
+        "README.md"
+    ],
+    "type": "module",
+    "scripts": {
+        "prepublish": "pnpm bump-version && pnpm -r compile",
+        "prebump-version": "pnpm test",
+        "bump-version": "node --loader ts-node/esm -r ts-node/register scripts/increment-version.ts",
+        "test": "vitest",
+        "test:coverage": "pnpm test --coverage"
+    },
+    "keywords": [
+        "http/2",
+        "http2",
+        "stream",
+        "server",
+        "back-end",
+        "backend"
+    ],
+    "author": {
+        "email": "sskeen9@gmail.com",
+        "name": "Samuel Skeen",
+        "url": "https://github.com/cwadrupldijjit"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/fluvial/fluvial.git"
+    },
+    "license": "GPL-3.0-only",
+    "devDependencies": {
+        "@types/express": "^4.17.16",
+        "@types/mime": "^3.0.1",
+        "@types/node": "^18.11.18",
+        "@vitest/coverage-c8": "^0.28.1",
+        "ansi-colors": "^4.1.3",
+        "pnpm": "^7.26.0",
+        "rimraf": "^4.1.2",
+        "ts-node": "^10.9.1",
+        "typescript": "^4.9.4",
+        "vite": "^4.0.4",
+        "vitest": "^0.28.1"
+    },
+    "dependencies": {
+        "mime": "^3.0.0"
+    },
+    "workspaces": {
+        "packages": [
+            "packages/core",
+            "packages/middleware"
+        ]
+    }
 }

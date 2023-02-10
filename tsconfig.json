@@ -14,7 +14,13 @@
         "outDir": "dist",
         "sourceMap": true,
         "declaration": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "resolveJsonModule": true
     },
-    "exclude": ["**/*"]
+    "include": [
+        "scripts"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
 }
