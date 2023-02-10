@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { ServerResponse } from 'node:http';
 import { Http2ServerResponse, constants } from 'node:http2';
 import { Readable } from 'node:stream';
@@ -14,7 +15,7 @@ export function wrapResponse(rawResponse: Http2ServerResponse | ServerResponse) 
             target[property as string] = newValue;
             return true;
         },
-        ownKeys(target) {
+        ownKeys() {
             return rawResponse.getHeaderNames();
         },
         has(target, p) {
@@ -30,11 +31,7 @@ export function wrapResponse(rawResponse: Http2ServerResponse | ServerResponse) 
     });
     
     Object.defineProperty(res, 'httpVersion', { get() { return rawResponse.req.httpVersion; } });
-    Object.defineProperty(res, 'rawResponse', {
-        get() {
-            return rawResponse;
-        },
-    });
+    Object.defineProperty(res, 'rawResponse', { get() { return rawResponse; } });
     Object.defineProperty(res, 'headers', {
         get() {
             return headers;
@@ -42,6 +39,7 @@ export function wrapResponse(rawResponse: Http2ServerResponse | ServerResponse) 
         enumerable: true,
     });
     res._status = 200;
+    res._eventSource = false;
     
     return res as Response;
 }
@@ -66,6 +64,33 @@ const responsePrototype = {
         this._status = statusCode;
     },
     
+    asEventSource(this: __InternalResponse, value?: boolean) {
+        if (typeof value != 'boolean') {
+            return this._eventSource;
+        }
+        
+        if (value) {
+            this._eventSourceId = randomUUID();
+            
+            // "connection" is only necessary for http/1.x responses and are ignored by Node for http/2 responses
+            this.headers['connection'] = 'keep-alive';
+            this.headers['content-type'] = 'text/event-stream';
+            this.headers['cache-control'] = 'no-cache';
+        }
+        else if (this._eventSourceId) {
+            if (this.headers['connection'] == 'keep-alive') {
+                this.headers['connection'] = undefined;
+            }
+            if (this.headers['content-type'] == 'text/event-stream') {
+                this.headers['content-type'] = undefined;
+            }
+            
+            this._eventSourceId = null;
+        }
+        
+        this._eventSource = value;
+    },
+    
     write(this: __InternalResponse, data: string | Buffer) {
         this.rawResponse.write(data);
     },
@@ -75,8 +100,12 @@ const responsePrototype = {
     },
     
     send(this: __InternalResponse, data?: string | object | Readable) {
+        if (this._eventSource) {
+            throw TypeError('An attempt to send a singular response failed because the response is set up to be an event source; use sendEvent instead');
+        }
+        
         if (this.responseSent) {
-            throw TypeError('attempted to send another response though the response stream is closed');
+            throw TypeError('An attempt to send a response failed because the response stream is closed');
         }
         
         if (data instanceof Readable) {
@@ -108,11 +137,38 @@ const responsePrototype = {
         this.rawResponse.end();
     },
     
-    json(this: __InternalResponse, data?: object) {
-        if (this.responseSent) {
-            throw TypeError('attempted to send another response though the response stream is closed');
+    sendEvent(this: __InternalResponse, event: string | object) {
+        if (!this._eventSource) {
+            throw TypeError('An attempt to send an event failed because this response is not set up to be an event source; must use the asEventSource() setter first');
         }
         
+        if (this.rawResponse.headersSent && this.rawResponse.closed) {
+            throw TypeError('An attempt to send an event failed because the stream is currently closed');
+        }
+        
+        if (!this.rawResponse.headersSent) {
+            if (this.httpVersion == '1.1') {
+                this.rawResponse.writeHead(this._status, {
+                    ...this.headers
+                });
+            }
+            else {
+                (this as Http2Response).rawResponse.stream.respond({
+                    [constants.HTTP2_HEADER_STATUS]: this._status,
+                    ...this.headers,
+                });
+            }
+        }
+        
+        const preparedData = typeof event == 'string' ? event : JSON.stringify(event);
+        
+        this.rawResponse.write(
+            'id: ' + this._eventSourceId + '\n' +
+            'data: ' + preparedData + '\n\n',
+        );
+    },
+    
+    json(this: __InternalResponse, data?: object) {
         if (data && typeof data != 'object') {
             throw TypeError('An attempt to send a response as JSON failed as the response was not an object or array');
         }
@@ -121,21 +177,7 @@ const responsePrototype = {
             data = Buffer.from(JSON.stringify(data));
         }
         
-        if (this.httpVersion == '1.1') {
-            (this.rawResponse as ServerResponse).writeHead(this._status);
-        }
-        else {
-            (this.rawResponse as Http2ServerResponse).stream.respond({
-                ...this.headers,
-                [constants.HTTP2_HEADER_STATUS]: this._status,
-            });
-        }
-        
-        if (data) {
-            this.rawResponse.write(data as Buffer);
-        }
-        
-        this.rawResponse.end();
+        this.send(data);
     },
     
     async stream(this: __InternalResponse, sourceStream: Readable) {
@@ -159,6 +201,8 @@ const responsePrototype = {
 
 interface __InternalResponse extends BaseResponse {
     _status: number;
+    _eventSource: boolean;
+    _eventSourceId: string;
 }
 
 interface BaseResponse {
@@ -174,6 +218,11 @@ interface BaseResponse {
     /** setter for a new status code */
     status(statusCode: number): void;
     
+    /** getter for the current eventSource value (default: false) */
+    asEventSource(): boolean;
+    /** setter for the eventSource value */
+    asEventSource(bool: boolean): void;
+    
     // response-sending methods
     /** pass-thru for http2Stream.write */
     write(data: string | Buffer): void;
@@ -182,6 +231,9 @@ interface BaseResponse {
     
     /** the simplest way to respond with or without data */
     send(data?: any): void;
+    
+    /** when the response is set as an event stream, this sends the event; errors otherwise */
+    sendEvent(data?: object | string): void;
     
     /** ideal for object data to be consumed in a browser */
     json(data: object): void;
