@@ -144,18 +144,65 @@ router.route('/users/:id')
     });
 ```
 
-### `Request` objects
+### `Request` object
 
-have the following properties
+- `method`: `'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD'`  
+  the HTTP method used in the request
+- `path`: `string`  
+  the path to which the request was sent
+- `headers`: `{ [key: string]: string }`  
+  the http headers on this request
+- `payload`: `any`  
+  the payload of the request (the equivalent of Express's `'body'`)
+- `rawRequest`: `http2.Http2ServerRequest | http.IncomingMessage`  
+  the underlying request as provided to and wrapped by fluvial; when the request was made via http/2, it will be an `Http2ServerRequest`, whereas if the request is done via http/1.x, it will be an `IncomingMessage`
+- `params`: `{ [key: string]: string }`  
+  the path parameters found in the path of the request (e.g., `/users/:id` matches the path `/users/3` and the `params` on the request would be `{ id: '3' }`)
+- `query`: `{ [key: string]: string }`  
+  the query parameters found in the path of the request (e.g., `/users?limit=10` would result in the `query` to be `{ limit: '10' }`)
+- `hash`: `string`  
+  the "hash" section of the requested URI (e.g. `/users#someHash` would be `someHash`)
+- `httpVersion`: `'2.0' | '1.1'`  
+  either `'2.0'` or `'1.1'` depending under which version the request was made
+- `response`: `Response`  
+  the `Response` object related to this `Request`
 
-- `method`: the HTTP method used in the request
-- `path`: the path to which the request was sent
-- `headers`: the http headers on this request
-- `payload`: the payload of the request (instead of `'body'`)
-- `rawRequest`: the `Http2ServerRequest` (http/2) or `IncomingMessage` (http/1.x) that this request wraps
-- `params`: the path parameters found in the path of the request (e.g., `/users/:id` matches the path `/users/3` and the `params` on the request would be `{ id: '3' }`)
-- `query`: the query parameters found in the path of the request (e.g., `/users?limit=10` would result in the `query` to be `{ limit: '10' }`)
-- `httpVersion`: either `'2'` or `'1.1'` depending on which version the request was made under
+### `Response` objects
+
+> **Response Modes:**  
+> There are two "modes" used for `Response`s:  Default and event stream.  The "default" mode allows only one response to be sent with the headers.  The "event stream" mode, however, prepares the connection to persist until the client asks for it to close and allows you to send multiple events.  The available properties change based on which mode is active.  Below will specify which of the properties apply to which mode; any property that doesn't specify this is available on both.
+
+- `status`: one of `status(code: number): void` or `status(): number` (read-only)  
+  a getter or setter for the status code that will be sent to the client; passing an argument into this method will set the current status code and return nothing whereas calling it without an argument, it will return the currently-set status code
+- `httpVersion`: `'2.0' | '1.1'` (read-only)  
+  the http version that is used for this response
+- `headers`: `{ [key: string]: string | string[] }`  
+  a way to manage headers to be sent back to the client
+- `responseSent`: `boolean` (read-only)  
+  a way to check if the response was sent to help prevent errors when code wants to send a response
+- `asEventSource`: one of `asEventSource(value: boolean): void` or `asEventSource(): boolean` (read-only)
+  a getter or setter to change this mode from default to event stream or vice versa
+- `send(data?: any): void` (default mode only)  
+  a way to finish the request, sending the status code, headers, and any payload passed as an argument to the method; if an object is passed to `send`, it will automatically serialize it into JSON
+- `json(data: object): void` (default mode only)  
+  serializes and sends the given data (which must be an object)
+- `write(data: string | Buffer): void`  
+  pass-through access to the underlying response stream's `write` method
+- `end(data?: string | Buffer): void` (default mode only)  
+  pass-through access to the underlying response stream's `end` method
+- `sendEvent(data?: object | string): void` (event stream mode only)  
+  a way to send data as part of an event source; will respond with the necessary headers with the first event and can be used multiple times, each time passing a message to a subscribed client
+- `stream(stream: Readable): void`  
+  a way to send a streamed response back to the client; usable in both default and event stream modes; fluvial will not transform the stream chunks to be formatted better, with particular note about event stream mode, as if the data isn't formatted properly when sending messages to the client, those messages won't make their way through to the client
+
+### Request Handlers & Middleware
+
+Functions provided to any of the `Router`'s methods meant to handle requests from a client can return (or resolve) a few different values that will signal to fluvial what it should do next with the request:
+
+- returning or resolving the returned Promise with `'next'` (or using the built-in constant `NEXT`), which will tell fluvial to continue to the next-matching handler
+- returning or resolving the returned Promise with `'route'` (or using the built-in constant `NEXT_ROUTE`), which will tell fluvial to skip any other functions registered at the same time as the current handler (such as the first function passed to a `router.get` call returning `'route'` will skip the second, third, etc., functions passed in at the same time) and pass the request on to the next-matching route
+- throwing an error or rejecting the returned Promise to signal an error was encountered and to stop further processing and pass it to the next matching `.catch` handler
+- returning/resolving any other value or not returning/resolving anything which fluvial will assume means that the handler is done handling the function and can stop passing the request along
 
 ## Comparisons with Express
 

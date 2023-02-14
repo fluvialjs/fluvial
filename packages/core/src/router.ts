@@ -168,9 +168,9 @@ const routePrototype = {
     /**
      * @returns This resolves to either nothing if this request is complete or `'next'` if you wish to push the request along to the next handler in the pipeline
      */
-    async handleRequest(this: __InternalRoute, remainingPath: PathString, req: Request, res: Response, err?: unknown): Promise<void | 'next'> {
+    async handleRequest(this: __InternalRoute, remainingPath: PathString, req: Request, res: Response, err?: unknown): Promise<void | 'next' | 'route'> {
         // by default, if there doesn't happen to be any handlers that work with this request, it should direct it to the next handler found
-        let latestResult: void | 'next' = 'next';
+        let latestResult: void | 'next' | 'route' = 'next';
         const handlerState: __RouteHandlerState = {
             error: err,
             req,
@@ -178,6 +178,9 @@ const routePrototype = {
         
         for (const handlers of this.__getMatchingHandlers(handlerState)) {
             for (const handler of handlers) {
+                if (handlerState.end) {
+                    break;
+                }
                 try {
                     if (typeof handler == 'function') {
                         if (handlerState.error) {
@@ -191,7 +194,7 @@ const routePrototype = {
                         latestResult = await handler.handleRequest(remainingPath, req, res, handlerState.error);
                     }
                     
-                    if (!latestResult) {
+                    if (latestResult != 'next') {
                         handlerState.end = true;
                         
                         if (handlerState.error) {
@@ -212,6 +215,13 @@ const routePrototype = {
                     // stop current chain; delegate to next `catch` handler
                     break;
                 }
+            }
+                
+            if (latestResult == 'route') {
+                latestResult = 'next';
+            }
+            else if (latestResult != 'next') {
+                latestResult = undefined;
             }
         }
         
@@ -343,7 +353,7 @@ interface Route {
  * A regular route handler or middleware function
  */
 interface RequestHandler {
-    (req: Request, res: Response): void | 'next' | Promise<void | 'next'>;
+    (req: Request, res: Response): void | 'next' | 'route' | Promise<void | 'next' | 'route'>;
 }
 
 /**

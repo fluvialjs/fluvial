@@ -61,6 +61,10 @@ const responsePrototype = {
             return this._status;
         }
         
+        if (this.rawResponse.headersSent) {
+            throw TypeError('An attempt to set the status code failed because the response headers have already been sent');
+        }
+        
         this._status = statusCode;
     },
     
@@ -96,6 +100,10 @@ const responsePrototype = {
     },
     
     end(this: __InternalResponse, data?: string | Buffer) {
+        if (this._eventSource) {
+            throw TypeError('An attempt to close the response stream failed because the response is set up to be an event source and only clients are allowed to close such streams');
+        }
+        
         this.rawResponse.end(data);
     },
     
@@ -224,41 +232,39 @@ interface BaseResponse {
     asEventSource(bool: boolean): void;
     
     // response-sending methods
+    
     /** pass-thru for http2Stream.write */
     write(data: string | Buffer): void;
-    /** pass-thru for http2Stream.end */
-    end(data?: string | Buffer): void;
     
-    /** the simplest way to respond with or without data */
+    /** DEFAULT MODE ONLY: the simplest way to respond with or without data */
     send(data?: any): void;
-    
-    /** when the response is set as an event stream, this sends the event; errors otherwise */
-    sendEvent(data?: object | string): void;
     
     /** ideal for object data to be consumed in a browser */
     json(data: object): void;
     
+    /** DEFAULT MODE ONLY: pass-thru for http2Stream.end */
+    end(data?: string | Buffer): void;
+    
+    /** EVENT STREAM MODE ONLY: when the response is set as an event stream, this sends the event; errors otherwise */
+    sendEvent(data?: object | string): void;
+    
     /** ideal for needing to respond with files */
-    stream(stream: Readable, options?: SendStreamOptions): Promise<void>;
+    stream(stream: Readable): void;
     // TODO: XML format
     // TODO: urlencoded format (like forms)
 }
 
 interface Http1Response extends BaseResponse {
-    httpVersion: '1.1';
+    readonly httpVersion: '1.1';
     readonly rawResponse: ServerResponse;
 }
 
 interface Http2Response extends BaseResponse {
-    httpVersion: '2.0';
+    readonly httpVersion: '2.0';
     readonly rawResponse: Http2ServerResponse;
 }
 
 type Response = Http1Response | Http2Response;
-
-interface SendStreamOptions {
-    noCache: boolean;
-}
 
 export type {
     Response,
