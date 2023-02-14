@@ -1,6 +1,6 @@
 {
     "name": "fluvial",
-    "version": "0.1.0-alpha.2",
+    "version": "0.1.0-alpha.3",
     "description": "Fluvial:  A light http/2 server framework, similar to Express",
     "main": "dist/index.js",
     "files": [
@@ -28,7 +28,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/fluvial/fluvial.git",
+        "url": "https://github.com/fluvialjs/fluvial.git",
         "directory": "packages/core"
     },
     "license": "GPL-3.0-only",
