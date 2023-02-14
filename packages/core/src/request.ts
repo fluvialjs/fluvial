@@ -20,7 +20,6 @@ export function wrapRequest(rawRequest: Http2ServerRequest | IncomingMessage) {
     const params = {};
     const query = Object.freeze(Object.fromEntries(url.searchParams.entries()));
     const headers = Object.freeze(Object.assign({}, rawRequest.headers));
-    const rawHeaders = Object.freeze(rawRequest.rawHeaders.slice());
     
     Object.defineProperty(req, 'params', { get() { return params; } });
     Object.defineProperty(req, 'query', { get() { return query; } });
@@ -28,7 +27,6 @@ export function wrapRequest(rawRequest: Http2ServerRequest | IncomingMessage) {
     Object.defineProperty(req, 'headers', { get() { return headers; } });
     Object.defineProperty(req, 'method', { get() { return rawRequest.method; } });
     Object.defineProperty(req, 'hash', { get() { return url.hash; } });
-    Object.defineProperty(req, 'rawHeaders', { get() { rawHeaders; } });
     
     return req as Request;
 }
@@ -45,7 +43,6 @@ interface BaseRequest {
     readonly path: PathString;
     readonly method: SupportedHttpMethods;
     readonly headers: Readonly<IncomingHttpHeaders>;
-    readonly rawHeaders: Readonly<string[]>;
     readonly payload: any;
     readonly rawRequest: Http2ServerRequest | IncomingMessage;
     readonly params: Readonly<ParamsDictionary>;
@@ -56,10 +53,12 @@ interface BaseRequest {
 
 interface Http1Request extends BaseRequest {
     readonly rawRequest: IncomingMessage;
+    readonly httpVersion: '1.1';
 }
 
 interface Http2Request extends BaseRequest {
     readonly rawRequest: Http2ServerRequest;
+    readonly httpVersion: '2.0';
 }
 
 type Request = Http1Request | Http2Request;

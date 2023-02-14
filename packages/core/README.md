@@ -14,7 +14,7 @@ These are the current aims of this project:
 
 1. Simple and straightforward API, borrowing ergonomics from language features and other similar libraries
 2. Very few dependencies (only when virtually unavoidable)
-3. Not too bulky, but not trying to be as lean or terse as possible
+3. Not too bulky, but not as lean or terse as possible
 4. Some helpful tools (such as payload handling) for handling most content
 5. Http/1.1-compatibility (which is helped greatly by Node)
 6. Eventual Http/3 compatibility once that's more mainstream and Node supports it
@@ -60,8 +60,8 @@ Call this to create a Fluvial application
 
 Arguments:
 
-- `options`: An optional object with the following properties
-  - `server`: An already-created `Http2Server` or `Http2SecureServer` as you can get from the `http2.createServer` or `http2.createSecureServer` functions (this might be needed if you have other libraries that handle the raw `Http2Server` instance and also need to provide the same instance to Fluvial)
+- `options`: An optional object with the following optional properties
+  - `server`: An already-created `Http2Server` or `Http2SecureServer` as you can get from `http2.createServer` or `http2.createSecureServer` (this might be needed if you have other libraries that handle the raw `Http2Server` instance and also need to provide the same instance to Fluvial)
   - `ssl`: An object to set up and configure a `Http2SecureServer`'s SSL with the following properties
     - `certificate` (the raw string/`Buffer` of the certificate) or `certificatePath` (the path to the certificate file), and
     - `key` (the raw string/`Buffer` of the key) or `keyPath` (the path to the key file)
@@ -144,27 +144,65 @@ router.route('/users/:id')
     });
 ```
 
-### `Request` objects
+### `Request` object
 
-have the following predefined properties
-
-- `method`: the HTTP method used in the request
-- `path`: the path to which the request was sent
-- `headers`: the http headers on this request
-- `payload`: the payload of the request (similar to Express's `'req.body'` property)
-- `rawRequest`: the `Http2ServerRequest` (http/2) or `IncomingMessage` (http/1.x) that this request wraps
-- `params`: the path parameters found in the path of the request (e.g., `/users/:id` matches the path `/users/3` and the `params` on the request would be `{ id: '3' }`)
-- `query`: the query parameters found in the path of the request (e.g., `/users?limit=10` would result in the `query` to be `{ limit: '10' }`)
-- `httpVersion`: either `'2'` or `'1.1'` depending under which version the request was made
-- `response`: the `Response` object paired with this `Request`
-
-**NOTE:** It is fine to add custom properties to the `Request` object (e.g., `user` for the user associated with the request).  Any fluvial-provided property is protected and therefore not editable.  However, if you're using TypeScript and wanting to extend the `Request` object, there isn't a great way to do this yet.
+- `method`: `'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD'`  
+  the HTTP method used in the request
+- `path`: `string`  
+  the path to which the request was sent
+- `headers`: `{ [key: string]: string }`  
+  the http headers on this request
+- `payload`: `any`  
+  the payload of the request (the equivalent of Express's `'body'`)
+- `rawRequest`: `http2.Http2ServerRequest | http.IncomingMessage`  
+  the underlying request as provided to and wrapped by fluvial; when the request was made via http/2, it will be an `Http2ServerRequest`, whereas if the request is done via http/1.x, it will be an `IncomingMessage`
+- `params`: `{ [key: string]: string }`  
+  the path parameters found in the path of the request (e.g., `/users/:id` matches the path `/users/3` and the `params` on the request would be `{ id: '3' }`)
+- `query`: `{ [key: string]: string }`  
+  the query parameters found in the path of the request (e.g., `/users?limit=10` would result in the `query` to be `{ limit: '10' }`)
+- `hash`: `string`  
+  the "hash" section of the requested URI (e.g. `/users#someHash` would be `someHash`)
+- `httpVersion`: `'2.0' | '1.1'`  
+  either `'2.0'` or `'1.1'` depending under which version the request was made
+- `response`: `Response`  
+  the `Response` object related to this `Request`
 
 ### `Response` objects
 
-have the following predefined properties and methods
+> **Response Modes:**  
+> There are two "modes" used for `Response`s:  Default and event stream.  The "default" mode allows only one response to be sent with the headers.  The "event stream" mode, however, prepares the connection to persist until the client asks for it to close and allows you to send multiple events.  The available properties change based on which mode is active.  Below will specify which of the properties apply to which mode; any property that doesn't specify this is available on both.
 
-- `
+- `status`: one of `status(code: number): void` or `status(): number` (read-only)  
+  a getter or setter for the status code that will be sent to the client; passing an argument into this method will set the current status code and return nothing whereas calling it without an argument, it will return the currently-set status code
+- `httpVersion`: `'2.0' | '1.1'` (read-only)  
+  the http version that is used for this response
+- `headers`: `{ [key: string]: string | string[] }`  
+  a way to manage headers to be sent back to the client
+- `responseSent`: `boolean` (read-only)  
+  a way to check if the response was sent to help prevent errors when code wants to send a response
+- `asEventSource`: one of `asEventSource(value: boolean): void` or `asEventSource(): boolean` (read-only)
+  a getter or setter to change this mode from default to event stream or vice versa
+- `send(data?: any): void` (default mode only)  
+  a way to finish the request, sending the status code, headers, and any payload passed as an argument to the method; if an object is passed to `send`, it will automatically serialize it into JSON
+- `json(data: object): void` (default mode only)  
+  serializes and sends the given data (which must be an object)
+- `write(data: string | Buffer): void`  
+  pass-through access to the underlying response stream's `write` method
+- `end(data?: string | Buffer): void` (default mode only)  
+  pass-through access to the underlying response stream's `end` method
+- `sendEvent(data?: object | string): void` (event stream mode only)  
+  a way to send data as part of an event source; will respond with the necessary headers with the first event and can be used multiple times, each time passing a message to a subscribed client
+- `stream(stream: Readable): void`  
+  a way to send a streamed response back to the client; usable in both default and event stream modes; fluvial will not transform the stream chunks to be formatted better, with particular note about event stream mode, as if the data isn't formatted properly when sending messages to the client, those messages won't make their way through to the client
+
+### Request Handlers & Middleware
+
+Functions provided to any of the `Router`'s methods meant to handle requests from a client can return (or resolve) a few different values that will signal to fluvial what it should do next with the request:
+
+- returning or resolving the returned Promise with `'next'` (or using the built-in constant `NEXT`), which will tell fluvial to continue to the next-matching handler
+- returning or resolving the returned Promise with `'route'` (or using the built-in constant `NEXT_ROUTE`), which will tell fluvial to skip any other functions registered at the same time as the current handler (such as the first function passed to a `router.get` call returning `'route'` will skip the second, third, etc., functions passed in at the same time) and pass the request on to the next-matching route
+- throwing an error or rejecting the returned Promise to signal an error was encountered and to stop further processing and pass it to the next matching `.catch` handler
+- returning/resolving any other value or not returning/resolving anything which fluvial will assume means that the handler is done handling the function and can stop passing the request along
 
 ## Comparisons with Express
 
