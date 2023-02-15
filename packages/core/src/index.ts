@@ -101,12 +101,27 @@ const applicationPrototype = Object.create(routerPrototype, {
                 }
                 
                 if (!this.server) {
-                    if (
+                    if (!this.invokedOptions.ssl) {
+                        this.server = createServer(this.mainHandler);
+                    }
+                    else if (
                         this.invokedOptions.ssl &&
-                        (((this.invokedOptions.ssl.certificatePath || this.invokedOptions.ssl.certificate) &&
-                        (this.invokedOptions.ssl.key || this.invokedOptions.ssl.keyPath)) ||
-                        ((this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath) &&
-                            this.invokedOptions.ssl.passphrase))
+                        (
+                            (
+                                (
+                                    this.invokedOptions.ssl.certificatePath || this.invokedOptions.ssl.certificate
+                                ) &&
+                                (
+                                    this.invokedOptions.ssl.key || this.invokedOptions.ssl.keyPath
+                                )
+                            ) ||
+                            (
+                                (
+                                    this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath
+                                ) &&
+                                this.invokedOptions.ssl.passphrase
+                            )
+                        )
                     ) {
                         if (this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath) {
                             this.server = createSecureServer({
@@ -130,7 +145,7 @@ const applicationPrototype = Object.create(routerPrototype, {
                         throw TypeError(`options provided are requesting that the server is spun up with SSL options, but the required options of certificate and key are not provided`);
                     }
                     else {
-                        this.server = createServer(this.mainHandler);
+                        throw Error('An unknown error occurred; please review the creation of the application');
                     }
                 }
                 
