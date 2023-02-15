@@ -103,10 +103,10 @@ const applicationPrototype = Object.create(routerPrototype, {
                 if (!this.server) {
                     if (
                         this.invokedOptions.ssl &&
-                        ((this.invokedOptions.ssl.certificatePath || this.invokedOptions.ssl.certificate) &&
+                        (((this.invokedOptions.ssl.certificatePath || this.invokedOptions.ssl.certificate) &&
                         (this.invokedOptions.ssl.key || this.invokedOptions.ssl.keyPath)) ||
                         ((this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath) &&
-                            this.invokedOptions.ssl.passphrase)
+                            this.invokedOptions.ssl.passphrase))
                     ) {
                         if (this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath) {
                             this.server = createSecureServer({
