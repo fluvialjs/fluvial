@@ -1,6 +1,6 @@
 {
     "name": "fluvial-root",
-    "version": "0.1.0-alpha.6",
+    "version": "0.1.0",
     "description": "Fluvial:  A light http/2 server framework, similar to Express",
     "main": "dist/index.js",
     "files": [
@@ -9,7 +9,7 @@
     ],
     "type": "module",
     "scripts": {
-        "prebump-version": "pnpm test",
+        "prebump-version": "pnpm test run",
         "bump-version": "node --loader ts-node/esm -r ts-node/register scripts/increment-version.ts",
         "test": "vitest",
         "test:coverage": "pnpm test --coverage"

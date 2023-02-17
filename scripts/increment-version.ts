@@ -322,6 +322,14 @@ else {
             newVersion.isAlpha = true;
         }
     }
+    // just graduate it from preview, please!
+    else if (newVersion.previewNumber && (options.major || options.minor || options.bugfix) && (!options.alpha && !options.beta)) {
+        newVersion = parseVersion(packageJson.version)
+        
+        newVersion.previewNumber = 0;
+        newVersion.isAlpha = false;
+        newVersion.isBeta = false;
+    }
 }
 
 if (options.dryRun) {
