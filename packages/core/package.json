@@ -12,7 +12,7 @@
         "compile": "tsc",
         "test": "vitest",
         "test:coverage": "pnpm test --coverage",
-        "prepublish": "pnpm test && pnpm compile"
+        "prepublish": "pnpm test run && pnpm compile"
     },
     "keywords": [
         "http/2",
