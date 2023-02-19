@@ -128,21 +128,7 @@ const responsePrototype = {
             this.headers['content-type'] = 'text/plain';
         }
         
-        if (this.httpVersion == '1.1') {
-            (this.rawResponse as ServerResponse).writeHead(this._status);
-        }
-        else {
-            (this.rawResponse as Http2ServerResponse).stream.respond({
-                ...this.headers,
-                [constants.HTTP2_HEADER_STATUS]: this._status,
-            });
-        }
-        
-        if (data) {
-            this.rawResponse.write(Buffer.from(data as string));
-        }
-        
-        this.rawResponse.end();
+        this._send(data as string);
     },
     
     sendEvent(this: __InternalResponse, event: string | object) {
@@ -181,11 +167,13 @@ const responsePrototype = {
             throw TypeError('An attempt to send a response as JSON failed as the response was not an object or array');
         }
         
+        let stringifiedData: string;
+        
         if (data) {
-            data = Buffer.from(JSON.stringify(data));
+            stringifiedData = JSON.stringify(data);
         }
         
-        this.send(data);
+        this._send(stringifiedData);
     },
     
     async stream(this: __InternalResponse, sourceStream: Readable) {
@@ -205,12 +193,32 @@ const responsePrototype = {
         
         sourceStream.pipe(this.rawResponse);
     },
+    
+    _send(this: __InternalResponse, data?: string) {
+        if (this.httpVersion == '1.1') {
+            (this.rawResponse as ServerResponse).writeHead(this._status);
+        }
+        else {
+            (this.rawResponse as Http2ServerResponse).stream.respond({
+                ...this.headers,
+                [constants.HTTP2_HEADER_STATUS]: this._status,
+            });
+        }
+        
+        if (data) {
+            this.rawResponse.write(Buffer.from(data));
+        }
+        
+        this.rawResponse.end();
+    },
 };
 
 interface __InternalResponse extends BaseResponse {
     _status: number;
     _eventSource: boolean;
     _eventSourceId: string;
+    
+    _send(data?: string): void;
 }
 
 interface BaseResponse {
