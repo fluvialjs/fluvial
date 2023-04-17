@@ -8,6 +8,86 @@ import {
 import type { Request } from './request.js';
 import type { Response } from './response.js';
 
+declare global {
+    namespace Fluvial {
+
+        /** @protected exported type; should not be imported outside of this package */
+        interface __InternalRouter extends Router {
+            handleRequest(remainingPath: PathString, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
+            __getMatchingRoute(state: __RouterState): Generator<__InternalRoute>;
+            routes: __InternalRoute[];
+            __addRoute(method: HandlerHttpMethods | null, path: PathMatcher, ...handlers: (RequestHandler | ErrorHandler | Router)[]): __InternalRoute;
+        }
+        
+        interface Router {
+            component: 'router';
+            get(path: PathMatcher, ...handlers: RequestHandler[]): this;
+            post(path: PathMatcher, ...handlers: RequestHandler[]): this;
+            put(path: PathMatcher, ...handlers: RequestHandler[]): this;
+            patch(path: PathMatcher, ...handlers: RequestHandler[]): this;
+            delete(path: PathMatcher, ...handlers: RequestHandler[]): this;
+            options(path: PathMatcher, ...handlers: RequestHandler[]): this;
+            head(path: PathMatcher, ...handlers: RequestHandler[]): this;
+            all(path: PathMatcher, ...handlers: RequestHandler[]): this;
+            use(path: PathMatcher, ...handlers: (RequestHandler | Router)[]): this;
+            use(...handlers: (RequestHandler | Router)[]): this;
+            route(path: PathMatcher): Route;
+            catch(path: PathMatcher, ...handlers: ErrorHandler[]): this;
+            catch(...handlers: ErrorHandler[]): this;
+        }
+        
+        /** @protected exported type; should not be imported outside of this package */
+        interface __InternalRoute extends Route {
+            handleRequest(remainingPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
+            __getMatchingHandlers(this: __InternalRoute, state: __RouteHandlerState): Generator<(RequestHandler | ErrorHandler | __InternalRouter)[]>;
+            handlers: [ method: HandlerHttpMethods, ...handlers: (RequestHandler | ErrorHandler | Router)[] ][];
+            pathMatcher: PathMatcher;
+        }
+        
+        type HandlerHttpMethods = SupportedHttpMethods | 'ALL' | 'ERROR';
+        
+        interface __RouterState {
+            error?: unknown;
+            path: PathString;
+            req: Request;
+            end?: boolean;
+        }
+        
+        interface __RouteHandlerState {
+            error?: unknown;
+            req: Request;
+            end?: boolean;
+        }
+        
+        interface Route {
+            component: 'route';
+            get(...handlers: RequestHandler[]): this;
+            post(...handlers: RequestHandler[]): this;
+            put(...handlers: RequestHandler[]): this;
+            patch(...handlers: RequestHandler[]): this;
+            delete(...handlers: RequestHandler[]): this;
+            options(...handlers: RequestHandler[]): this;
+            head(...handlers: RequestHandler[]): this;
+            all(...handlers: RequestHandler[]): this;
+            catch(...handlers: ErrorHandler[]): this;
+        }
+        
+        /**
+         * A regular route handler or middleware function
+         */
+        interface RequestHandler {
+            (req: Request, res: Response): void | 'next' | 'route' | Promise<void | 'next' | 'route'>;
+        }
+        
+        /**
+         * An error route handler or middleware function.  Three parameters are required; any less and it's considered a regular route handler
+         */
+        interface ErrorHandler<ErrorType = unknown> {
+            (err: ErrorType, req: Request, res: Response): void | 'next' | Promise<void | 'next'>;
+        }
+    }
+}
+
 export function Router(): Router {
     const router = Object.create(routerPrototype) as __InternalRouter;
     router.routes = [];
@@ -288,81 +368,14 @@ function removeMatchedPathPortion(currentPath: PathString, matcher: PathMatcher)
     }
 }
 
-/** @protected exported type; should not be imported outside of this package */
-export interface __InternalRouter extends Router {
-    handleRequest(remainingPath: PathString, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
-    __getMatchingRoute(state: __RouterState): Generator<__InternalRoute>;
-    routes: __InternalRoute[];
-    __addRoute(method: HandlerHttpMethods | null, path: PathMatcher, ...handlers: (RequestHandler | ErrorHandler | Router)[]): __InternalRoute;
-}
-
-export interface Router {
-    component: 'router';
-    get(path: PathMatcher, ...handlers: RequestHandler[]): this;
-    post(path: PathMatcher, ...handlers: RequestHandler[]): this;
-    put(path: PathMatcher, ...handlers: RequestHandler[]): this;
-    patch(path: PathMatcher, ...handlers: RequestHandler[]): this;
-    delete(path: PathMatcher, ...handlers: RequestHandler[]): this;
-    options(path: PathMatcher, ...handlers: RequestHandler[]): this;
-    head(path: PathMatcher, ...handlers: RequestHandler[]): this;
-    all(path: PathMatcher, ...handlers: RequestHandler[]): this;
-    use(path: PathMatcher, ...handlers: (RequestHandler | Router)[]): this;
-    use(...handlers: (RequestHandler | Router)[]): this;
-    route(path: PathMatcher): Route;
-    catch(path: PathMatcher, ...handlers: ErrorHandler[]): this;
-    catch(...handlers: ErrorHandler[]): this;
-}
-
-/** @protected exported type; should not be imported outside of this package */
-export interface __InternalRoute extends Route {
-    handleRequest(remainingPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
-    __getMatchingHandlers(this: __InternalRoute, state: __RouteHandlerState): Generator<(RequestHandler | ErrorHandler | __InternalRouter)[]>;
-    handlers: [ method: HandlerHttpMethods, ...handlers: (RequestHandler | ErrorHandler | Router)[] ][];
-    pathMatcher: PathMatcher;
-}
-
-type HandlerHttpMethods = SupportedHttpMethods | 'ALL' | 'ERROR';
-
-interface __RouterState {
-    error?: unknown;
-    path: PathString;
-    req: Request;
-    end?: boolean;
-}
-
-interface __RouteHandlerState {
-    error?: unknown;
-    req: Request;
-    end?: boolean;
-}
-
-interface Route {
-    component: 'route';
-    get(...handlers: RequestHandler[]): this;
-    post(...handlers: RequestHandler[]): this;
-    put(...handlers: RequestHandler[]): this;
-    patch(...handlers: RequestHandler[]): this;
-    delete(...handlers: RequestHandler[]): this;
-    options(...handlers: RequestHandler[]): this;
-    head(...handlers: RequestHandler[]): this;
-    all(...handlers: RequestHandler[]): this;
-    catch(...handlers: ErrorHandler[]): this;
-}
-
-/**
- * A regular route handler or middleware function
- */
-interface RequestHandler {
-    (req: Request, res: Response): void | 'next' | 'route' | Promise<void | 'next' | 'route'>;
-}
-
-/**
- * An error route handler or middleware function.  Three parameters are required; any less and it's considered a regular route handler
- */
-interface ErrorHandler<ErrorType = unknown> {
-    (err: ErrorType, req: Request, res: Response): void | 'next' | Promise<void | 'next'>;
-}
+export type __InternalRouter = Fluvial.__InternalRouter;
+export type __InternalRoute = Fluvial.__InternalRoute;
+export type Route = Fluvial.Route;
+export type Router = Fluvial.Router;
+export type RequestHandler = Fluvial.RequestHandler;
+export type ErrorHandler = Fluvial.ErrorHandler;
+type __RouterState = Fluvial.__RouterState;
+type HandlerHttpMethods = Fluvial.HandlerHttpMethods;
+type __RouteHandlerState = Fluvial.__RouteHandlerState;
 
 export type SupportedHttpMethods = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
-
-
