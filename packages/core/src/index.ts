@@ -204,4 +204,6 @@ export interface Application extends Router {
 
 export {
     Router,
+    Request,
+    Response,
 };

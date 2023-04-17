@@ -4,8 +4,35 @@ import { ParamsDictionary, PathString, QueryDictionary } from './path-matching.j
 import { Response } from './response.js';
 import { SupportedHttpMethods } from './router.js';
 
+declare global {
+    namespace Fluvial {
+        export interface BaseRequest {
+            readonly response: Response;
+            readonly path: PathString;
+            readonly method: SupportedHttpMethods;
+            readonly headers: Readonly<IncomingHttpHeaders>;
+            readonly payload: any;
+            readonly rawRequest: Http2ServerRequest | IncomingMessage;
+            readonly params: Readonly<ParamsDictionary>;
+            readonly query: Readonly<QueryDictionary>;
+            readonly hash: string;
+            readonly httpVersion: '1.1' | '2.0';
+        }
+        
+        interface Http1Request extends BaseRequest {
+            readonly rawRequest: IncomingMessage;
+            readonly httpVersion: '1.1';
+        }
+        
+        interface Http2Request extends BaseRequest {
+            readonly rawRequest: Http2ServerRequest;
+            readonly httpVersion: '2.0';
+        }
+    }
+}
+
 export function wrapRequest(rawRequest: Http2ServerRequest | IncomingMessage) {
-    const req = Object.create(requestPrototype) as __InternalRequest;
+    const req = Object.create(requestPrototype) as Fluvial.BaseRequest;
     
     const rawPath = rawRequest.httpVersion == '1.1' ?
         rawRequest.url :
@@ -34,35 +61,4 @@ export function wrapRequest(rawRequest: Http2ServerRequest | IncomingMessage) {
 // if there are any methods that work best from the prototype, it should be added here
 const requestPrototype = {};
 
-interface __InternalRequest extends BaseRequest {
-    
-}
-
-interface BaseRequest {
-    readonly response: Response;
-    readonly path: PathString;
-    readonly method: SupportedHttpMethods;
-    readonly headers: Readonly<IncomingHttpHeaders>;
-    readonly payload: any;
-    readonly rawRequest: Http2ServerRequest | IncomingMessage;
-    readonly params: Readonly<ParamsDictionary>;
-    readonly query: Readonly<QueryDictionary>;
-    readonly hash: string;
-    readonly httpVersion: '1.1' | '2.0';
-}
-
-interface Http1Request extends BaseRequest {
-    readonly rawRequest: IncomingMessage;
-    readonly httpVersion: '1.1';
-}
-
-interface Http2Request extends BaseRequest {
-    readonly rawRequest: Http2ServerRequest;
-    readonly httpVersion: '2.0';
-}
-
-type Request = Http1Request | Http2Request;
-
-export type {
-    Request,
-};
+export type Request = Fluvial.Http1Request | Fluvial.Http2Request;
