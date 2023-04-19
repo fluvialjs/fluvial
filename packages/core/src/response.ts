@@ -9,7 +9,8 @@ declare global {
         interface BaseResponse {
             readonly request: Request;
             readonly rawResponse: Http2ServerResponse | ServerResponse;
-            readonly headers: Record<string, string | string[]>;
+            /** assigning to properties of this object will set the associated header; deleting the property or assigning `undefined` to a property will unset it */
+            readonly headers: Record<string, string | string[] | undefined>;
             readonly httpVersion: '1.1' | '2.0';
             
             /** getter for if a response has already been sent and the response is closed */
