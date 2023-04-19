@@ -73,9 +73,14 @@ export function wrapResponse(rawResponse: Http2ServerResponse | ServerResponse) 
         get(target, property) {
             return rawResponse.getHeader(property as string);
         },
-        set(target, property, newValue) {
-            rawResponse.setHeader(property as string, newValue as string);
-            target[property as string] = newValue;
+        set(target, property: string, newValue: string) {
+            if (!newValue && rawResponse.hasHeader(property)) {
+                rawResponse.removeHeader(property);
+            }
+            else if (newValue) {
+                rawResponse.setHeader(property, newValue);
+            }
+            target[property] = newValue;
             return true;
         },
         ownKeys() {
