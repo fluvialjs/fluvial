@@ -71,40 +71,41 @@ declare global {
 export function wrapResponse(rawResponse: Http2ServerResponse | ServerResponse) {
     const res = Object.create(responsePrototype) as Fluvial.__InternalResponse;
     const headers = new Proxy<Record<string, string | string[]>>({}, {
-        get(target, property) {
-            return rawResponse.getHeader(property as string);
+        get(target, property: string) {
+            return target[property.toLowerCase()];
         },
         set(target, property: string, newValue: string) {
-            if (!newValue && rawResponse.hasHeader(property)) {
-                rawResponse.removeHeader(property);
+            const lowerProperty = property.toLowerCase();
+            if (!newValue && rawResponse.hasHeader(lowerProperty)) {
+                rawResponse.removeHeader(lowerProperty);
+                delete target[lowerProperty];
             }
             else if (newValue) {
-                rawResponse.setHeader(property, newValue);
+                rawResponse.setHeader(lowerProperty, newValue);
+                target[lowerProperty] = rawResponse.getHeader(lowerProperty) as string;
             }
-            target[property] = newValue;
             return true;
         },
-        ownKeys() {
-            return rawResponse.getHeaderNames();
+        ownKeys(target) {
+            return Object.keys(target);
         },
-        has(target, p) {
-            return rawResponse.hasHeader(p as string);
+        has(target, p: string) {
+            return rawResponse.hasHeader(p) ?? p.toLowerCase() in target;
         },
-        deleteProperty(target, p) {
-            if (rawResponse.hasHeader(p as string)) {
-                rawResponse.removeHeader(p as string);
+        deleteProperty(target, p: string) {
+            const lowerProperty = p.toLowerCase();
+            if (rawResponse.hasHeader(lowerProperty)) {
+                rawResponse.removeHeader(lowerProperty);
             }
-            
-            return true;
+            return delete target[lowerProperty];
         },
     });
     
     Object.defineProperty(res, 'httpVersion', { get() { return rawResponse.req.httpVersion; } });
     Object.defineProperty(res, 'rawResponse', { get() { return rawResponse; } });
     Object.defineProperty(res, 'headers', {
-        get() {
-            return headers;
-        },
+        value: headers,
+        writable: false,
         enumerable: true,
     });
     res._status = 200;
@@ -265,7 +266,7 @@ const responsePrototype = {
     
     _send(this: Fluvial.__InternalResponse, data?: string) {
         if (this.httpVersion == '1.1') {
-            (this.rawResponse as ServerResponse).writeHead(this._status);
+            (this.rawResponse as ServerResponse).writeHead(this._status, { ...this.headers });
         }
         else {
             (this.rawResponse as Http2ServerResponse).stream.respond({
