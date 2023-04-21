@@ -18,12 +18,12 @@ declare global {
             /** getter for the current status code */
             status(): number;
             /** setter for a new status code */
-            status(statusCode: number): void;
+            status(statusCode: number): this;
             
             /** getter for the current eventSource value (default: false) */
             asEventSource(): boolean;
             /** setter for the eventSource value */
-            asEventSource(bool: boolean): void;
+            asEventSource(bool: boolean): this;
             
             // response-sending methods
             
@@ -40,7 +40,7 @@ declare global {
             end(data?: string | Buffer): void;
             
             /** EVENT STREAM MODE ONLY: when the response is set as an event stream, this sends the event; errors otherwise */
-            sendEvent(data?: object | string): void;
+            sendEvent(data?: object | string): this;
             
             /** ideal for needing to respond with files */
             stream(stream: Readable): void;
@@ -136,6 +136,8 @@ const responsePrototype = {
         }
         
         this._status = statusCode;
+        
+        return this;
     },
     
     asEventSource(this: Fluvial.__InternalResponse, value?: boolean) {
@@ -163,6 +165,8 @@ const responsePrototype = {
         }
         
         this._eventSource = value;
+        
+        return this;
     },
     
     write(this: Fluvial.__InternalResponse, data: string | Buffer) {
@@ -230,6 +234,8 @@ const responsePrototype = {
             'id: ' + this._eventSourceId + '\n' +
             'data: ' + preparedData + '\n\n',
         );
+        
+        return this;
     },
     
     json(this: Fluvial.__InternalResponse, data?: object) {
