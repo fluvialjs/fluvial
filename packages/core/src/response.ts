@@ -136,8 +136,6 @@ const responsePrototype = {
         }
         
         this._status = statusCode;
-        
-        return this;
     },
     
     asEventSource(this: Fluvial.__InternalResponse, value?: boolean) {
@@ -165,8 +163,6 @@ const responsePrototype = {
         }
         
         this._eventSource = value;
-        
-        return this;
     },
     
     write(this: Fluvial.__InternalResponse, data: string | Buffer) {
@@ -234,8 +230,6 @@ const responsePrototype = {
             'id: ' + this._eventSourceId + '\n' +
             'data: ' + preparedData + '\n\n',
         );
-        
-        return this;
     },
     
     json(this: Fluvial.__InternalResponse, data?: object) {

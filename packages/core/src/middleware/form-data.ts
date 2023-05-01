@@ -24,7 +24,7 @@ export function deserializeFormDataPayload(options?: DeserializeFormDataOptions)
     console.log('temp dir', tempDir);
     
     return async (req: Request, res: Response) => {
-        if (req.headers['content-type'].includes('multipart/form-data')) {
+        if (req.headers['content-type']?.includes('multipart/form-data')) {
             let data = '';
             
             const files: TempFileMap = {};

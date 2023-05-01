@@ -4,7 +4,7 @@ import type { Response } from '../response.js';
 export function deserializeJsonPayload(options?: DeserializeJsonPayloadOptions) {
     const parse = options?.parse ?? JSON.parse;
     return async (req: Request, res: Response) => {
-        if (req.headers['content-type'].includes('json')) {
+        if (req.headers['content-type']?.includes('json')) {
             let data = '';
             
             for await (const chunk of req.rawRequest) {
