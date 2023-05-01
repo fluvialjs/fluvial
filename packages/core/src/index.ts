@@ -11,6 +11,7 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import { Request, wrapRequest } from './request.js';
 import { Response, wrapResponse } from './response.js';
 import { Router, routerPrototype, __InternalRouter } from './router.js';
+export * from './middleware/index.js';
 
 export const NEXT = 'next';
 export const NEXT_ROUTE = 'route';
@@ -59,7 +60,7 @@ export function fluvial(options: ApplicationOptions = {}) {
         Object.defineProperty(res, 'request', req);
         
         try {
-            const result = await app.handleRequest(req.path, req, res);
+            const result = await app.handleRequest(req.path, '/', req, res);
             
             if (result == 'next' && !res.responseSent) {
                 res.status(404);

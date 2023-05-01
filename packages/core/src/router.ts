@@ -10,10 +10,9 @@ import type { Response } from './response.js';
 
 declare global {
     namespace Fluvial {
-
         /** @protected exported type; should not be imported outside of this package */
         interface __InternalRouter extends Router {
-            handleRequest(remainingPath: PathString, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
+            handleRequest(remainingPath: PathString, matchedPath: string, req: Request, res: Response, err?: unknown, queryAssigned?: boolean): Promise<void | 'next'>;
             __getMatchingRoute(state: __RouterState): Generator<__InternalRoute>;
             routes: __InternalRoute[];
             __addRoute(method: HandlerHttpMethods | null, path: PathMatcher, ...handlers: (RequestHandler | ErrorHandler | Router)[]): __InternalRoute;
@@ -38,9 +37,10 @@ declare global {
         
         /** @protected exported type; should not be imported outside of this package */
         interface __InternalRoute extends Route {
-            handleRequest(remainingPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
+            handleRequest(remainingPath: string, matchedPath: string, req: Request, res: Response, err?: unknown, queryAssigned?: boolean): Promise<void | 'next'>;
             __getMatchingHandlers(this: __InternalRoute, state: __RouteHandlerState): Generator<(RequestHandler | ErrorHandler | __InternalRouter)[]>;
             handlers: [ method: HandlerHttpMethods, ...handlers: (RequestHandler | ErrorHandler | Router)[] ][];
+            __addHandler(this: __InternalRoute, method: HandlerHttpMethods | null, ...handlers: (RequestHandler | ErrorHandler | Router)[]): this;
             pathMatcher: PathMatcher;
         }
         
@@ -48,15 +48,20 @@ declare global {
         
         interface __RouterState {
             error?: unknown;
+            matchedPath?: PathString;
             path: PathString;
             req: Request;
             end?: boolean;
+            queryAssigned?: boolean;
         }
         
         interface __RouteHandlerState {
             error?: unknown;
             req: Request;
+            path: string;
+            matchedPath?: string;
             end?: boolean;
+            queryAssigned?: boolean;
         }
         
         interface Route {
@@ -169,19 +174,20 @@ export const routerPrototype = {
     /**
      * @returns This resolves to either nothing if this request is complete or `'next'` if you wish to push the request along to the next handler in the pipeline
      */
-    async handleRequest(this: __InternalRouter, path: PathString, req: Request, res: Response): Promise<void | 'next'> {
+    async handleRequest(this: __InternalRouter, path: PathString, matchedPath: PathString, req: Request, res: Response, err?: unknown, queryAssigned = false): Promise<void | 'next'> {
         // by default, if there doesn't happen to be any handlers that work with this request, it should direct it to the next handler found
         let latestResult: void | 'next' = 'next';
         const routerState: __RouterState = {
-            error: null,
+            error: err ?? null,
             path,
             req,
+            matchedPath,
+            queryAssigned,
         };
         
         for (const route of this.__getMatchingRoute(routerState)) {
             try {
-                const remainingPath = removeMatchedPathPortion(path, route.pathMatcher);
-                latestResult = await route.handleRequest(remainingPath, req, res, routerState.error);
+                latestResult = await route.handleRequest(path, matchedPath, req, res, routerState.error, routerState.queryAssigned);
                 
                 if (routerState.error) {
                     // consider the error handled and resolve as if not errored
@@ -213,11 +219,15 @@ export const routerPrototype = {
             }
             const params = getRouteParams(state.path, route.pathMatcher);
             
-            if (params) {
-                // TODO: put this at the beginning of the request cycle; doing it each time doesn't make sense...
+            if (!state.queryAssigned) {
+                // TODO: put this at the beginning of the request cycle; the assignment here is not great...
                 const query = getQueryParams(state.path);
-                Object.assign(state.req.params, params);
                 Object.assign(state.req.query, query);
+                state.queryAssigned = true;
+            }
+            
+            if (params) {
+                Object.assign(state.req.params, params);
                 
                 yield route;
             }
@@ -248,13 +258,17 @@ const routePrototype = {
     /**
      * @returns This resolves to either nothing if this request is complete or `'next'` if you wish to push the request along to the next handler in the pipeline
      */
-    async handleRequest(this: __InternalRoute, remainingPath: PathString, req: Request, res: Response, err?: unknown): Promise<void | 'next' | 'route'> {
+    async handleRequest(this: __InternalRoute, path: PathString, matchedPath: PathString, req: Request, res: Response, err?: unknown, queryAssigned = false): Promise<void | 'next' | 'route'> {
         // by default, if there doesn't happen to be any handlers that work with this request, it should direct it to the next handler found
         let latestResult: void | 'next' | 'route' = 'next';
         const handlerState: __RouteHandlerState = {
             error: err,
             req,
+            path,
+            matchedPath,
+            queryAssigned,
         };
+        
         
         for (const handlers of this.__getMatchingHandlers(handlerState)) {
             for (const handler of handlers) {
@@ -271,7 +285,12 @@ const routePrototype = {
                         }
                     }
                     else {
-                        latestResult = await handler.handleRequest(remainingPath, req, res, handlerState.error);
+                        // removing the matched portion here instead of the router because otherwise future route handlers fail to have the necessary information
+                        const remainingPath = removeMatchedPathPortion(path, this.pathMatcher) || '/';
+                        const previousPath = remainingPath == path ?
+                            matchedPath :
+                            (matchedPath == '/' ? '' : matchedPath) + path.slice(0, path.indexOf(remainingPath));
+                        latestResult = await handler.handleRequest(remainingPath, previousPath, req, res, handlerState.error, handlerState.queryAssigned);
                     }
                     
                     if (latestResult != 'next') {
@@ -326,6 +345,58 @@ const routePrototype = {
             }
         }
     } as __InternalRoute['__getMatchingHandlers'],
+    
+    get(this: __InternalRoute, ...handlers: RequestHandler[]) {
+        this.__addHandler('GET', ...handlers);
+        
+        return this as Route;
+    },
+    post(this: __InternalRoute, ...handlers: RequestHandler[]) {
+        this.__addHandler('POST', ...handlers);
+        
+        return this as Route;
+    },
+    put(this: __InternalRoute, ...handlers: RequestHandler[]) {
+        this.__addHandler('PUT', ...handlers);
+        
+        return this as Route;
+    },
+    patch(this: __InternalRoute, ...handlers: RequestHandler[]) {
+        this.__addHandler('PATCH', ...handlers);
+        
+        return this as Route;
+    },
+    delete(this: __InternalRoute, ...handlers: RequestHandler[]) {
+        this.__addHandler('DELETE', ...handlers);
+        
+        return this as Route;
+    },
+    options(this: __InternalRoute, ...handlers: RequestHandler[]) {
+        this.__addHandler('OPTIONS', ...handlers);
+        
+        return this as Route;
+    },
+    head(this: __InternalRoute, ...handlers: RequestHandler[]) {
+        this.__addHandler('HEAD', ...handlers);
+        
+        return this as Route;
+    },
+    all(this: __InternalRoute, ...handlers: RequestHandler[]) {
+        this.__addHandler('ALL', ...handlers);
+        
+        return this as Route;
+    },
+    catch(this: __InternalRoute, ...handlers: ErrorHandler[]) {
+        this.__addHandler('ERROR', ...handlers)
+        
+        return this as Route;
+    },
+    
+    __addHandler(this: __InternalRoute, method: HandlerHttpMethods | null, ...handlers: (RequestHandler | ErrorHandler | Router)[]) {
+        this.handlers.push([ method, ...handlers ]);
+        
+        return this;
+    },
 };
 
 function removeMatchedPathPortion(currentPath: PathString, matcher: PathMatcher): PathString {
@@ -351,7 +422,7 @@ function removeMatchedPathPortion(currentPath: PathString, matcher: PathMatcher)
         for (let i = 0; i < matcherPortions.length; i++) {
             const pathPortion = pathPortions[i];
             const matcherPortion = matcherPortions[i];
-            if (matcherPortion.startsWith(':')) {
+            if (pathPortion && matcherPortion.startsWith(':')) {
                 const unprefixedPortion = matcherPortion.slice(1);
                 pathLength += 1 + params[unprefixedPortion].length;
             }
