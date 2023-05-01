@@ -15,7 +15,7 @@ describe('router', () => {
                 visited = true;
             });
             
-            const result = await router.handleRequest('/foo', {
+            const result = await router.handleRequest('/foo', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -34,7 +34,7 @@ describe('router', () => {
                 visited = true;
             });
             
-            const result = await router.handleRequest('/bar', {
+            const result = await router.handleRequest('/bar', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -55,7 +55,7 @@ describe('router', () => {
                 visited = true;
             });
             
-            const result = await router.handleRequest('/foo', {
+            const result = await router.handleRequest('/foo', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -74,7 +74,7 @@ describe('router', () => {
                 visited = true;
             });
             
-            const result = await router.handleRequest('/foo', {
+            const result = await router.handleRequest('/foo', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -93,7 +93,7 @@ describe('router', () => {
                 visited = true;
             });
             
-            const result = await router.handleRequest('/foo', {
+            const result = await router.handleRequest('/foo', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -116,7 +116,7 @@ describe('router', () => {
                 return 'next' as const;
             });
             
-            const result = await router.handleRequest('/foo', {
+            const result = await router.handleRequest('/foo', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -137,7 +137,7 @@ describe('router', () => {
                 return 'next' as const;
             });
             
-            const result = await router.handleRequest('/foo', {
+            const result = await router.handleRequest('/foo', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -159,7 +159,7 @@ describe('router', () => {
                 return 'next' as const;
             });
             
-            const result = await router.handleRequest('/foo', {
+            const result = await router.handleRequest('/foo', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -179,7 +179,7 @@ describe('router', () => {
                 secondVisited = true;
             });
             
-            const result = await router.handleRequest('/foo', {
+            const result = await router.handleRequest('/foo', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -203,7 +203,7 @@ describe('router', () => {
                 subRouterVisited = true;
             });
             
-            const result = await mainRouter.handleRequest('/main/sub', {
+            const result = await mainRouter.handleRequest('/main/sub', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -227,7 +227,7 @@ describe('router', () => {
                 subRouterVisited = true;
             });
             
-            const result = await mainRouter.handleRequest('/1234/sub', req, {} as Response);
+            const result = await mainRouter.handleRequest('/1234/sub', '/', req, {} as Response);
             
             expect(result).toBeFalsy();
             expect(subRouterVisited).toBe(true);
@@ -254,7 +254,7 @@ describe('router', () => {
                 errorHandlerVisited = true;
             });
             
-            const result = await router.handleRequest('/', {
+            const result = await router.handleRequest('/', '/', {
                 method: 'GET',
                 params: {},
                 query: {},
@@ -287,7 +287,7 @@ describe('router', () => {
             sameErrorUsed = err == error;
         });
         
-        const result = await router.handleRequest('/', {
+        const result = await router.handleRequest('/', '/', {
             method: 'GET',
             params: {},
             query: {},
