@@ -1,12 +1,14 @@
 import { IncomingMessage } from 'node:http';
 import { constants, Http2ServerRequest, IncomingHttpHeaders } from 'node:http2';
+import { Readable } from 'node:stream';
+import { URL } from 'node:url';
 import { ParamsDictionary, PathString, QueryDictionary } from './path-matching.js';
 import { Response } from './response.js';
 import { SupportedHttpMethods } from './router.js';
 
 declare global {
     namespace Fluvial {
-        export interface BaseRequest {
+        export interface BaseRequest extends Readable {
             readonly response: Response;
             readonly path: PathString;
             readonly method: SupportedHttpMethods;
@@ -19,6 +21,10 @@ declare global {
             readonly httpVersion: '1.1' | '2.0';
         }
         
+        export interface __InternalRequest extends BaseRequest {
+            response: Response;
+        }
+        
         interface Http1Request extends BaseRequest {
             readonly rawRequest: IncomingMessage;
             readonly httpVersion: '1.1';
@@ -28,37 +34,121 @@ declare global {
             readonly rawRequest: Http2ServerRequest;
             readonly httpVersion: '2.0';
         }
+        
+        export type Request = Http1Request | Http2Request;
     }
 }
 
-export function wrapRequest(rawRequest: Http2ServerRequest | IncomingMessage) {
-    const req = Object.create(requestPrototype) as Fluvial.BaseRequest;
+export class FluvialRequest extends Readable implements Fluvial.BaseRequest {
+    get _parsedOriginalUrl() {
+        return new URL(this.#url.href);
+    }
     
-    const rawPath = rawRequest.httpVersion == '1.1' ?
-        rawRequest.url :
-        rawRequest.headers[constants.HTTP2_HEADER_PATH];
+    set _parsedOriginalUrl(value) {/* noop */}
     
-    const url = new URL(`http://foo.com${rawPath}`);
+    get params() {
+        return this.#params;
+    }
     
-    Object.defineProperty(req, 'rawRequest', { get() { return rawRequest; } });
-    Object.defineProperty(req, 'path', { get() { return url.pathname; } });
+    get path() {
+        return this.#url.pathname as `/${string}`;
+    }
     
-    // this gets filled later through path matching
-    const params = {};
-    const query = Object.freeze(Object.fromEntries(url.searchParams.entries()));
-    const headers = Object.freeze(Object.assign({}, rawRequest.headers));
+    get query() {
+        return this.#query;
+    }
     
-    Object.defineProperty(req, 'params', { get() { return params; } });
-    Object.defineProperty(req, 'query', { get() { return query; } });
-    Object.defineProperty(req, 'httpVersion', { get() { return rawRequest.httpVersion; } });
-    Object.defineProperty(req, 'headers', { get() { return headers; } });
-    Object.defineProperty(req, 'method', { get() { return rawRequest.method; } });
-    Object.defineProperty(req, 'hash', { get() { return url.hash; } });
+    get httpVersion() {
+        return this.rawRequest.httpVersion as '1.1' | '2.0';
+    }
     
-    return req as Request;
+    get headers() {
+        return this.#headers;
+    }
+    
+    get method() {
+        return this.rawRequest.method as SupportedHttpMethods;
+    }
+    
+    get hash() {
+        return this.#url.hash;
+    }
+    
+    set response(value) {
+        if (!this.#response) {
+            this.#response = value;
+        }
+    }
+    
+    get response() {
+        return this.#response;
+    }
+    
+    get payload() {
+        return this.#payload;
+    }
+    
+    #params = {};
+    #url: URL;
+    #query: Readonly<Record<string, string>>;
+    #headers: Readonly<Record<string, string>>;
+    #response: Response;
+    #payload: any;
+    
+    constructor(public rawRequest: IncomingMessage | Http2ServerRequest) {
+        super();
+        
+        const rawPath = rawRequest.httpVersion == '1.1' ?
+            rawRequest.url :
+            rawRequest.headers[constants.HTTP2_HEADER_PATH];
+        
+        this.#url = new URL(`http://foo.com${rawPath}`);
+        this.#query = Object.freeze(Object.fromEntries(this.#url.searchParams.entries()));
+        this.#headers = Object.freeze(Object.assign({}, rawRequest.headers as Record<string, string>));
+    }
+    
+    async *#read() {
+        try {
+            for await (const chunk of this.rawRequest) {
+                yield chunk as Buffer;
+            }
+        }
+        catch (e) {
+            console.error(e);
+        }
+    }
+    
+    #readIterator: AsyncGenerator<Buffer>;
+    #readBuffer: Buffer;
+    
+    async _read() {
+        if (!this.#readIterator) {
+            this.#readIterator = this.#read();
+        }
+        
+        if (this.#readBuffer && this.push(this.#readBuffer)) {
+            this.#readBuffer = null;
+            return;
+        }
+        try {
+            const result = await this.#readIterator.next();
+            
+            if (!result.value) {
+                this.push(null);
+                return;
+            }
+            
+            const pushed = this.push(result.value);
+            
+            if (!pushed) {
+                this.#readBuffer = result.value;
+            }
+        }
+        catch (e) {
+            console.error(e);
+        }
+        
+    }
 }
 
-// if there are any methods that work best from the prototype, it should be added here
-const requestPrototype = {};
-
-export type Request = Fluvial.Http1Request | Fluvial.Http2Request;
+export type Request = Fluvial.Request;

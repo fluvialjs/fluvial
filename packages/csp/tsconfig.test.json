@@ -4,10 +4,12 @@
         "types": [
             "vitest",
             "node"
-        ]
+        ],
+        "rootDir": "src",
+        "strict": false,
+        "strictNullChecks": false
     },
     "include": [
-        "src/**/*.ts",
         "**/*.test.ts",
         "**/__test__/**/*.ts"
     ],

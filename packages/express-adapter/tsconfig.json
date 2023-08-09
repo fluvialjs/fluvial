@@ -12,6 +12,6 @@
         "**/*.test.ts",
         "vite.config.ts",
         "dist",
-        "**/__test__/**/*.ts"
+        "**/__test__"
     ]
 }

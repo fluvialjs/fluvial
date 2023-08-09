@@ -50,6 +50,27 @@ And then you should be good to send a request to the `/anything` route and it wi
 
 There is an extended example below in the "Comparisons with Express" section.
 
+### Quick note about SSL
+
+In an ideal environment, you will want to have SSL that is handled before the request is handed off to your fluvial application (e.g., load balancers, possibly nginx or Apache, etc.).  However, if you want to develop with HTTP/2 locally, browsers will not connect to servers with HTTP/2 without the connection being made over SSL.
+
+Therefore, a quick-n-dirty solution is to generate a local SSL certificate and providing it like this:
+
+```sh
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 365 -nodes
+```
+
+```js
+const app = fluvial({
+  ssl: {
+    certificatePath: path.join('path', 'to', 'cert.pem'),
+    keyPath: path.join('path', 'to', 'key.pem'),
+  },
+});
+```
+
+To ensure this only applies locally, you can set an environment variable that your code can detect and then apply the ssl configuration.
+
 ## API Documentation
 
 The documentation here is simplified for the scope of the readme.  Type annotations are included which may help with the documentation while developing your application.

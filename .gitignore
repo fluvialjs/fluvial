@@ -3,3 +3,4 @@ coverage
 dist
 .vscode/**/*
 !.vscode/_sample.launch.jsonc
+*.tsbuildinfo

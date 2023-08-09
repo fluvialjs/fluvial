@@ -3,7 +3,6 @@ import {
     type PathMatcher,
     type ParamsDictionary,
     getRouteParams,
-    getQueryParams,
 } from './path-matching.js';
 import type { Request } from './request.js';
 import type { Response } from './response.js';
@@ -12,7 +11,7 @@ declare global {
     namespace Fluvial {
         /** @protected exported type; should not be imported outside of this package */
         interface __InternalRouter extends Router {
-            handleRequest(remainingPath: PathString, matchedPath: string, req: Request, res: Response, err?: unknown, queryAssigned?: boolean): Promise<void | 'next'>;
+            handleRequest(remainingPath: PathString, matchedPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
             __getMatchingRoute(state: __RouterState): Generator<__InternalRoute>;
             routes: __InternalRoute[];
             __addRoute(method: HandlerHttpMethods | null, path: PathMatcher, ...handlers: (RequestHandler | ErrorHandler | Router)[]): __InternalRoute;
@@ -37,7 +36,7 @@ declare global {
         
         /** @protected exported type; should not be imported outside of this package */
         interface __InternalRoute extends Route {
-            handleRequest(remainingPath: string, matchedPath: string, req: Request, res: Response, err?: unknown, queryAssigned?: boolean): Promise<void | 'next'>;
+            handleRequest(remainingPath: string, matchedPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
             __getMatchingHandlers(this: __InternalRoute, state: __RouteHandlerState): Generator<(RequestHandler | ErrorHandler | __InternalRouter)[]>;
             handlers: [ method: HandlerHttpMethods, ...handlers: (RequestHandler | ErrorHandler | Router)[] ][];
             __addHandler(this: __InternalRoute, method: HandlerHttpMethods | null, ...handlers: (RequestHandler | ErrorHandler | Router)[]): this;
@@ -52,7 +51,6 @@ declare global {
             path: PathString;
             req: Request;
             end?: boolean;
-            queryAssigned?: boolean;
         }
         
         interface __RouteHandlerState {
@@ -61,7 +59,6 @@ declare global {
             path: string;
             matchedPath?: string;
             end?: boolean;
-            queryAssigned?: boolean;
         }
         
         interface Route {
@@ -174,7 +171,14 @@ export const routerPrototype = {
     /**
      * @returns This resolves to either nothing if this request is complete or `'next'` if you wish to push the request along to the next handler in the pipeline
      */
-    async handleRequest(this: __InternalRouter, path: PathString, matchedPath: PathString, req: Request, res: Response, err?: unknown, queryAssigned = false): Promise<void | 'next'> {
+    async handleRequest(
+        this: __InternalRouter,
+        path: PathString,
+        matchedPath: PathString,
+        req: Request,
+        res: Response,
+        err?: unknown,
+    ): Promise<void | 'next'> {
         // by default, if there doesn't happen to be any handlers that work with this request, it should direct it to the next handler found
         let latestResult: void | 'next' = 'next';
         const routerState: __RouterState = {
@@ -182,12 +186,11 @@ export const routerPrototype = {
             path,
             req,
             matchedPath,
-            queryAssigned,
         };
         
         for (const route of this.__getMatchingRoute(routerState)) {
             try {
-                latestResult = await route.handleRequest(path, matchedPath, req, res, routerState.error, routerState.queryAssigned);
+                latestResult = await route.handleRequest(path, matchedPath, req, res, routerState.error);
                 
                 if (routerState.error) {
                     // consider the error handled and resolve as if not errored
@@ -218,13 +221,6 @@ export const routerPrototype = {
                 return;
             }
             const params = getRouteParams(state.path, route.pathMatcher);
-            
-            if (!state.queryAssigned) {
-                // TODO: put this at the beginning of the request cycle; the assignment here is not great...
-                const query = getQueryParams(state.path);
-                Object.assign(state.req.query, query);
-                state.queryAssigned = true;
-            }
             
             if (params) {
                 Object.assign(state.req.params, params);
@@ -258,7 +254,7 @@ const routePrototype = {
     /**
      * @returns This resolves to either nothing if this request is complete or `'next'` if you wish to push the request along to the next handler in the pipeline
      */
-    async handleRequest(this: __InternalRoute, path: PathString, matchedPath: PathString, req: Request, res: Response, err?: unknown, queryAssigned = false): Promise<void | 'next' | 'route'> {
+    async handleRequest(this: __InternalRoute, path: PathString, matchedPath: PathString, req: Request, res: Response, err?: unknown): Promise<void | 'next' | 'route'> {
         // by default, if there doesn't happen to be any handlers that work with this request, it should direct it to the next handler found
         let latestResult: void | 'next' | 'route' = 'next';
         const handlerState: __RouteHandlerState = {
@@ -266,9 +262,7 @@ const routePrototype = {
             req,
             path,
             matchedPath,
-            queryAssigned,
         };
-        
         
         for (const handlers of this.__getMatchingHandlers(handlerState)) {
             for (const handler of handlers) {
@@ -290,7 +284,7 @@ const routePrototype = {
                         const previousPath = remainingPath == path ?
                             matchedPath :
                             (matchedPath == '/' ? '' : matchedPath) + path.slice(0, path.indexOf(remainingPath));
-                        latestResult = await handler.handleRequest(remainingPath, previousPath, req, res, handlerState.error, handlerState.queryAssigned);
+                        latestResult = await handler.handleRequest(remainingPath, previousPath, req, res, handlerState.error);
                     }
                     
                     if (latestResult != 'next') {

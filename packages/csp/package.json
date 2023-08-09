@@ -1,50 +1,44 @@
 {
-    "name": "fluvial",
+    "name": "@fluvial/csp",
     "version": "0.4.0",
-    "description": "Fluvial:  A light http/2 server framework, similar to Express",
     "main": "dist/index.js",
     "files": [
         "dist/**/*",
         "README.md"
     ],
-    "type": "module",
     "scripts": {
         "compile": "tsc -b",
         "test": "vitest",
-        "test:coverage": "pnpm test --coverage",
+        "test:coverage": "pnpm test -- --coverage",
         "prepublish": "pnpm test run && pnpm compile"
     },
+    "description": "A fluvial-compatible Content Security Policy middleware",
     "keywords": [
+        "fluvial",
         "http/2",
         "http2",
-        "stream",
-        "server",
-        "back-end",
-        "backend"
+        "security",
+        "csp"
     ],
+    "type": "module",
     "author": {
-        "email": "sskeen9@gmail.com",
         "name": "Samuel Skeen",
+        "email": "sskeen9@gmail.com",
         "url": "https://github.com/cwadrupldijjit"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/fluvialjs/fluvial.git",
-        "directory": "packages/core"
+        "directory": "packages/csp"
     },
     "license": "GPL-3.0-only",
     "devDependencies": {
-        "@types/mime": "^3.0.1",
         "@types/node": "^20.4.1",
-        "@vitest/coverage-c8": "^0.28.1",
-        "pnpm": "^7.26.0",
-        "rimraf": "^4.1.2",
-        "ts-node": "^10.9.1",
+        "@vitest/coverage-v8": "^0.33.0",
         "typescript": "^5.1.6",
-        "vite": "^4.0.4",
-        "vitest": "^0.28.1"
+        "vitest": "^0.33.0"
     },
-    "dependencies": {
-        "mime": "^3.0.0"
+    "peerDependencies": {
+        "fluvial": "^0.3.0"
     }
 }
