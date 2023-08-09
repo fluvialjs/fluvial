@@ -13,7 +13,7 @@
         "test:coverage": "pnpm test -- --coverage",
         "prepublish": "pnpm test run && pnpm compile"
     },
-    "description": "A fluvial-compatible Content Security Policy middleware",
+    "description": "A fluvial-compatible Cross-Origin Resource Sharing middleware",
     "keywords": [
         "fluvial",
         "http/2",
