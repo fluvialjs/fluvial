@@ -8,8 +8,8 @@ import {
 } from 'node:http2';
 import { readFileSync } from 'node:fs';
 import { IncomingMessage, ServerResponse } from 'node:http';
-import { Request, wrapRequest } from './request.js';
-import { Response, wrapResponse } from './response.js';
+import { FluvialRequest, Request } from './request.js';
+import { FluvialResponse, Response } from './response.js';
 import { Router, routerPrototype, __InternalRouter } from './router.js';
 export * from './middleware/index.js';
 
@@ -17,27 +17,9 @@ export const NEXT = 'next';
 export const NEXT_ROUTE = 'route';
 
 export function fluvial(options: ApplicationOptions = {}) {
-    let appInSettingStage = true;
-    const app = new Proxy<__InternalApplication>(Object.create(applicationPrototype), {
-        apply(target, thisArg, argumentsArray) {
-            target.mainHandler.apply(thisArg, argumentsArray);
-        },
-        get(target, property) {
-            if (property == 'apply') {
-                return target.mainHandler.apply.bind(target.mainHandler);
-            }
-            
-            return Reflect.get(target, property);
-        },
-        set(target, property: keyof __InternalApplication, value, receiver) {
-            if ((property != 'server' && !appInSettingStage) || (property == 'server' && target.server)) {
-                return false;
-            }
-            
-            target[property] = value;
-            return true;
-        },
-    });
+    const app = Application as __InternalApplication;
+    
+    Reflect.setPrototypeOf(app, applicationPrototype);
     
     app.routes = [];
     app.mainHandler = Application;
@@ -48,16 +30,14 @@ export function fluvial(options: ApplicationOptions = {}) {
         app.server.on('request', Application);
     }
     
-    appInSettingStage = false;
-    
     return app as Application;
     
     async function Application(rawRequest: Http2ServerRequest | IncomingMessage, rawResponse: Http2ServerResponse | ServerResponse) {
-        const req = wrapRequest(rawRequest);
-        const res = wrapResponse(rawResponse);
+        const req = new FluvialRequest(rawRequest) as Request;
+        const res = new FluvialResponse(rawResponse) as Response;
         
-        Object.defineProperty(req, 'response', res);
-        Object.defineProperty(res, 'request', req);
+        (req as Fluvial.__InternalRequest).response = res;
+        (res as Fluvial.__InternalResponse).request = req;
         
         try {
             const result = await app.handleRequest(req.path, '/', req, res);
@@ -192,14 +172,15 @@ interface ApplicationSslOptions {
     passphrase?: string;
 }
 
-interface __InternalApplication extends Application, __InternalRouter {
+export interface __InternalApplication extends Application, __InternalRouter {
     server: Http2Server | Http2SecureServer;
-    mainHandler(req: Http2ServerRequest, res: Http2ServerResponse): void;
+    mainHandler(req: Http2ServerRequest, res: Http2ServerResponse): Promise<void>;
     invokedOptions: ApplicationOptions;
 }
 
 /** Similar to Express.Application */
 export interface Application extends Router {
+    (req: Http2ServerRequest, res: Http2ServerResponse): Promise<void>;
     listen(port: number, callback?: () => void): void;
 }
 

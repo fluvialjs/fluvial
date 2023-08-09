@@ -15,7 +15,9 @@
         "sourceMap": true,
         "declaration": true,
         "skipLibCheck": true,
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "strict": false,
+        "strictNullChecks": false
     },
     "include": [
         "scripts"

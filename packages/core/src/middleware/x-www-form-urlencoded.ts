@@ -44,7 +44,7 @@ function parse(rawPayload: string) {
 }
 
 export function getUrlencodedPathSegments(rawKey: string, recursed?: true): (string | number)[] {
-    let [ mainMatch, mainKey, subKey, remaining ] = (rawKey.match(/([^\[\]]+)(?:\[([^\]]*)\](.*))?/i) ?? []) as [ string, string, string | number, string ];
+    let [ mainMatch, mainKey, subKey, remaining ] = (rawKey.match(/([^\[\]]+)(?:\[([^\]]*)\](.*))?/i) ?? []) as [ string, string, string | number | undefined, string ];
     
     if (mainMatch) {
         if (subKey == undefined) {
@@ -57,7 +57,7 @@ export function getUrlencodedPathSegments(rawKey: string, recursed?: true): (str
             prefix.push(mainKey);
         }
         
-        if (!subKey || subKey < 0) {
+        if (!subKey || Number(subKey) < 0) {
             subKey = -1;
         }
         else if (!isNaN(+subKey)) {

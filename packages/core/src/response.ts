@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { ServerResponse } from 'node:http';
 import { Http2ServerResponse, constants } from 'node:http2';
-import { Readable } from 'node:stream';
-import { Request } from './request';
+import { Readable, Writable } from 'node:stream';
+import { finished } from 'node:stream/promises';
+import { Request } from './request.js';
 
 declare global {
     namespace Fluvial {
-        interface BaseResponse {
+        interface BaseResponse extends Writable {
             readonly request: Request;
             readonly rawResponse: Http2ServerResponse | ServerResponse;
             /** assigning to properties of this object will set the associated header; deleting the property or assigning `undefined` to a property will unset it */
@@ -27,33 +28,23 @@ declare global {
             
             // response-sending methods
             
-            /** pass-thru for http2Stream.write */
-            write(data: string | Buffer): void;
-            
             /** DEFAULT MODE ONLY: the simplest way to respond with or without data */
-            send(data?: any): void;
+            send(data?: any): Promise<this>;
             
             /** ideal for object data to be consumed in a browser */
-            json(data: object): void;
-            
-            /** DEFAULT MODE ONLY: pass-thru for http2Stream.end */
-            end(data?: string | Buffer): void;
+            json(data: object): Promise<this>;
             
             /** EVENT STREAM MODE ONLY: when the response is set as an event stream, this sends the event; errors otherwise */
             sendEvent(data?: object | string): this;
             
             /** ideal for needing to respond with files */
-            stream(stream: Readable): void;
+            stream(stream: Readable): this;
             // TODO: XML format
             // TODO: urlencoded format (like forms)
         }
 
         interface __InternalResponse extends Fluvial.BaseResponse {
-            _status: number;
-            _eventSource: boolean;
-            _eventSourceId: string;
-            
-            _send(data?: string): void;
+            request: Request;
         }
         
         interface Http1Response extends BaseResponse {
@@ -68,90 +59,112 @@ declare global {
     }
 }
 
-export function wrapResponse(rawResponse: Http2ServerResponse | ServerResponse) {
-    const res = Object.create(responsePrototype) as Fluvial.__InternalResponse;
-    const headers = new Proxy<Record<string, string | string[]>>({}, {
-        get(target, property: string) {
+export class FluvialResponse extends Writable {
+    get httpVersion() {
+        return this.request.httpVersion;
+    }
+    
+    get component() {
+        return 'response';
+    }
+    
+    get responseSent() {
+        return this.httpVersion == '1.1' ?
+            this.rawResponse.headersSent :
+            (this.rawResponse as Http2ServerResponse).stream.headersSent;
+    }
+    
+    headers = new Proxy<Record<string, string | string[]>>({}, {
+        get: (target, property) => {
+            if (typeof property == 'symbol') {
+                return (target as { [key: symbol]: any })[property];
+            }
             return target[property.toLowerCase()];
         },
-        set(target, property: string, newValue: string) {
+        set: (target, property: string, newValue: string) => {
             const lowerProperty = property.toLowerCase();
-            if (!newValue && rawResponse.hasHeader(lowerProperty)) {
-                rawResponse.removeHeader(lowerProperty);
+            if (!newValue && this.rawResponse.hasHeader(lowerProperty)) {
+                this.rawResponse.removeHeader(lowerProperty);
                 delete target[lowerProperty];
             }
             else if (newValue) {
-                rawResponse.setHeader(lowerProperty, newValue);
-                target[lowerProperty] = rawResponse.getHeader(lowerProperty) as string;
+                this.rawResponse.setHeader(lowerProperty, newValue);
+                target[lowerProperty] = this.rawResponse.getHeader(lowerProperty) as string;
             }
             return true;
         },
-        ownKeys(target) {
+        ownKeys: (target) => {
             return Object.keys(target);
         },
-        has(target, p: string) {
-            return rawResponse.hasHeader(p) ?? p.toLowerCase() in target;
+        has: (target, p: string) => {
+            return this.rawResponse.hasHeader(p) ?? p.toLowerCase() in target;
         },
-        deleteProperty(target, p: string) {
+        deleteProperty: (target, p: string) => {
             const lowerProperty = p.toLowerCase();
-            if (rawResponse.hasHeader(lowerProperty)) {
-                rawResponse.removeHeader(lowerProperty);
+            if (this.rawResponse.hasHeader(lowerProperty)) {
+                this.rawResponse.removeHeader(lowerProperty);
             }
             return delete target[lowerProperty];
         },
     });
+    readonly rawResponse: Http2ServerResponse | ServerResponse;
     
-    Object.defineProperty(res, 'httpVersion', { get() { return rawResponse.req.httpVersion; } });
-    Object.defineProperty(res, 'rawResponse', { get() { return rawResponse; } });
-    Object.defineProperty(res, 'headers', {
-        value: headers,
-        writable: false,
-        enumerable: true,
-    });
-    res._status = 200;
-    res._eventSource = false;
+    #req: Request;
     
-    return res as Response;
-}
-
-const responsePrototype = {
-    get component() {
-        return 'response';
-    },
+    get request() {
+        return this.#req;
+    }
     
-    get responseSent() {
-        const self = this as Fluvial.__InternalResponse;
-        return self.httpVersion == '1.1' ?
-            self.rawResponse.headersSent :
-            (self.rawResponse as Http2ServerResponse).stream.headersSent;
-    },
+    set request(value) {
+        if (!this.#req) {
+            this.#req = value;
+        }
+    }
     
-    status(this: Fluvial.__InternalResponse, statusCode?: number) {
+    #status = 200;
+    #eventSource = false;
+    
+    constructor(rawResponse: Http2ServerResponse | ServerResponse) {
+        super();
+        
+        this.rawResponse = rawResponse;
+    }
+    
+    status(statusCode: number): this;
+    status(): number;
+    status(statusCode?: number) {
         if (!statusCode) {
-            return this._status;
+            return this.#status;
         }
         
         if (this.rawResponse.headersSent) {
             throw TypeError('An attempt to set the status code failed because the response headers have already been sent');
         }
         
-        this._status = statusCode;
-    },
+        this.rawResponse.statusCode = statusCode;
+        this.#status = statusCode;
+        
+        return this;
+    }
     
-    asEventSource(this: Fluvial.__InternalResponse, value?: boolean) {
-        if (typeof value != 'boolean') {
-            return this._eventSource;
+    asEventSource(value: boolean): this;
+    asEventSource(): boolean;
+    asEventSource(value?: boolean): boolean | this {
+        if (value == undefined) {
+            return this.#eventSource;
         }
         
         if (value) {
-            this._eventSourceId = randomUUID();
+            this.#eventSourceId = randomUUID();
             
-            // "connection" is only necessary for http/1.x responses and are ignored by Node for http/2 responses
-            this.headers['connection'] = 'keep-alive';
+            // "connection" is only necessary for http/1.x responses and is ignored with a warning by Node for http/2 responses
+            if (this.httpVersion == '1.1') {
+                this.headers['connection'] = 'keep-alive';
+            }
             this.headers['content-type'] = 'text/event-stream';
             this.headers['cache-control'] = 'no-cache';
         }
-        else if (this._eventSourceId) {
+        else if (this.#eventSourceId) {
             if (this.headers['connection'] == 'keep-alive') {
                 this.headers['connection'] = undefined;
             }
@@ -159,26 +172,33 @@ const responsePrototype = {
                 this.headers['content-type'] = undefined;
             }
             
-            this._eventSourceId = null;
+            this.#eventSourceId = null;
         }
         
-        this._eventSource = value;
-    },
+        this.#eventSource = value;
+        
+        return this;
+    }
     
-    write(this: Fluvial.__InternalResponse, data: string | Buffer) {
-        this.rawResponse.write(data);
-    },
+    #eventSourceId: string;
     
-    end(this: Fluvial.__InternalResponse, data?: string | Buffer) {
-        if (this._eventSource) {
+    _write(data: string | Buffer, encoding: BufferEncoding = 'utf-8') {
+        return this.rawResponse.write(data, encoding);
+    }
+    
+    end(data?: string | Buffer | (() => void)) {
+        if (this.#eventSource) {
             throw TypeError('An attempt to close the response stream failed because the response is set up to be an event source and only clients are allowed to close such streams');
         }
         
-        this.rawResponse.end(data);
-    },
+        // all overloads of writable.end will work here...
+        this.rawResponse.end(data as string);
+        
+        return this;
+    }
     
-    send(this: Fluvial.__InternalResponse, data?: string | object | Readable) {
-        if (this._eventSource) {
+    send(data?: string | object | Readable) {
+        if (this.#eventSource) {
             throw TypeError('An attempt to send a singular response failed because the response is set up to be an event source; use sendEvent instead');
         }
         
@@ -198,11 +218,11 @@ const responsePrototype = {
             this.headers['content-type'] = 'text/plain';
         }
         
-        this._send(data as string);
-    },
+        return this.#send(data as string);
+    }
     
-    sendEvent(this: Fluvial.__InternalResponse, event: string | object) {
-        if (!this._eventSource) {
+    sendEvent(event: string | object) {
+        if (!this.#eventSource) {
             throw TypeError('An attempt to send an event failed because this response is not set up to be an event source; must use the asEventSource() setter first');
         }
         
@@ -212,13 +232,13 @@ const responsePrototype = {
         
         if (!this.rawResponse.headersSent) {
             if (this.httpVersion == '1.1') {
-                this.rawResponse.writeHead(this._status, {
+                this.rawResponse.writeHead(this.#status, {
                     ...this.headers
                 });
             }
             else {
-                (this as Fluvial.Http2Response).rawResponse.stream.respond({
-                    [constants.HTTP2_HEADER_STATUS]: this._status,
+                (this.rawResponse as Http2ServerResponse).stream.respond({
+                    [constants.HTTP2_HEADER_STATUS]: this.#status,
                     ...this.headers,
                 });
             }
@@ -227,12 +247,14 @@ const responsePrototype = {
         const preparedData = typeof event == 'string' ? event : JSON.stringify(event);
         
         this.rawResponse.write(
-            'id: ' + this._eventSourceId + '\n' +
+            'id: ' + this.#eventSourceId + '\n' +
             'data: ' + preparedData + '\n\n',
         );
-    },
+        
+        return this;
+    }
     
-    json(this: Fluvial.__InternalResponse, data?: object) {
+    json(data?: object) {
         if (data && typeof data != 'object') {
             throw TypeError('An attempt to send a response as JSON failed as the response was not an object or array');
         }
@@ -243,44 +265,50 @@ const responsePrototype = {
             stringifiedData = JSON.stringify(data);
         }
         
-        this._send(stringifiedData);
-    },
+        return this.#send(stringifiedData);
+    }
     
-    async stream(this: Fluvial.__InternalResponse, sourceStream: Readable) {
+    stream(sourceStream: Readable) {
         if (this.responseSent) {
             throw TypeError('attempted to send another response though the response stream is closed');
         }
         
         if (this.httpVersion == '1.1') {
-            (this.rawResponse as ServerResponse).writeHead(this._status);
+            (this.rawResponse as ServerResponse).writeHead(this.#status);
         }
         else {
             (this.rawResponse as Http2ServerResponse).stream.respond({
                 ...this.headers,
-                [constants.HTTP2_HEADER_STATUS]: this._status,
+                [constants.HTTP2_HEADER_STATUS]: this.#status,
             });
         }
         
         sourceStream.pipe(this.rawResponse);
-    },
+        
+        return this;
+    }
     
-    _send(this: Fluvial.__InternalResponse, data?: string) {
+    async #send(data?: string) {
         if (this.httpVersion == '1.1') {
-            (this.rawResponse as ServerResponse).writeHead(this._status, { ...this.headers });
+            (this.rawResponse as ServerResponse).writeHead(this.#status, { ...this.headers });
         }
         else {
             (this.rawResponse as Http2ServerResponse).stream.respond({
                 ...this.headers,
-                [constants.HTTP2_HEADER_STATUS]: this._status,
+                [constants.HTTP2_HEADER_STATUS]: this.#status,
             });
         }
         
         if (data) {
-            this.rawResponse.write(Buffer.from(data));
+            this.write(Buffer.from(data));
         }
         
-        this.rawResponse.end();
-    },
+        this.end();
+        
+        await finished(this.rawResponse);
+        
+        return this;
+    }
 };
 
 export type Response = Fluvial.Http1Response | Fluvial.Http2Response;

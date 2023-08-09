@@ -48,6 +48,12 @@ app.listen(8090, () => {
 
 And then you should be good to send a request to the `/anything` route and it will respond with the message you added in the route handler.
 
+As http/2 is preferable over HTTPS (and if the client for your API is a browser), you might need to generate an SSL certificate.  Though there are much better tutorials out there for generating these, you can generate some quickly that can run with:
+
+```sh
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 365 -nodes
+```
+
 There is an extended example below in the "Comparisons with Express" section.
 
 ## API Documentation

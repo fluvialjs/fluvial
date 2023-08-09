@@ -1,0 +1,59 @@
+{
+    "name": "@fluvial/express-adapter",
+    "version": "0.4.0",
+    "main": "dist/index.js",
+    "files": [
+        "dist/**/*",
+        "src/**/*",
+        "README.md"
+    ],
+    "scripts": {
+        "compile": "tsc -b",
+        "test": "vitest",
+        "test:coverage": "pnpm test -- --coverage",
+        "prepublish": "pnpm test run && pnpm compile"
+    },
+    "description": "Express middleware to Fluvial middleware or vice versa adapter",
+    "keywords": [
+        "fluvial",
+        "http/2",
+        "http2",
+        "middleware",
+        "server"
+    ],
+    "type": "module",
+    "author": {
+        "name": "Samuel Skeen",
+        "email": "sskeen9@gmail.com",
+        "url": "https://github.com/cwadrupldijjit"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/fluvialjs/fluvial.git",
+        "directory": "packages/express-adapter"
+    },
+    "license": "GPL-3.0-only",
+    "devDependencies": {
+        "@fluvial/cors": "link:../cors",
+        "@fluvial/csp": "link:../csp",
+        "@types/cors": "^2.8.13",
+        "@types/express": "^4.17.17",
+        "@types/express-session": "^1.17.7",
+        "@types/node": "^20.4.1",
+        "@types/passport": "^1.0.12",
+        "@types/passport-local": "^1.0.35",
+        "@vitest/coverage-v8": "^0.33.0",
+        "cors": "^2.8.5",
+        "express": "^4.18.2",
+        "express-session": "^1.17.3",
+        "fluvial": "link:../core",
+        "helmet": "^7.0.0",
+        "passport": "^0.6.0",
+        "passport-local": "^1.0.0",
+        "typescript": "^5.1.6",
+        "vitest": "^0.33.0"
+    },
+    "peerDependencies": {
+        "fluvial": "^0.3.0"
+    }
+}
