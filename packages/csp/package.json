@@ -1,6 +1,6 @@
 {
     "name": "@fluvial/csp",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "main": "dist/index.js",
     "files": [
         "dist/**/*",
@@ -39,6 +39,6 @@
         "vitest": "^0.33.0"
     },
     "peerDependencies": {
-        "fluvial": "^0.3.0"
+        "fluvial": ">=0.4.0"
     }
 }

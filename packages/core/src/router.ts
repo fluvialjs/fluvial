@@ -18,6 +18,7 @@ declare global {
         }
         
         interface Router {
+            (remainingPath: PathString, matchedPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
             component: 'router';
             get(path: PathMatcher, ...handlers: RequestHandler[]): this;
             post(path: PathMatcher, ...handlers: RequestHandler[]): this;
@@ -91,9 +92,23 @@ declare global {
 }
 
 export function Router(): Router {
-    const router = Object.create(routerPrototype) as __InternalRouter;
+    const router = _router.bind(_router) as __InternalRouter;
     router.routes = [];
+    
+    // _router.prototype = routerPrototype;
+    Reflect.setPrototypeOf(router, routerPrototype);
     return router;
+    
+    function _router(
+        this: __InternalRouter,
+        remainingPath: PathString,
+        matchedPath: string,
+        req: Request,
+        res: Response,
+        err?: unknown
+    ): Promise<void | 'next'> {
+        return this.handleRequest(remainingPath, matchedPath, req, res, err);
+    }
 }
 
 export const routerPrototype = {
@@ -246,6 +261,8 @@ export const routerPrototype = {
     },
 };
 
+Reflect.setPrototypeOf(routerPrototype, Function.prototype);
+
 const routePrototype = {
     get component() {
         return 'route';
@@ -270,7 +287,7 @@ const routePrototype = {
                     break;
                 }
                 try {
-                    if (typeof handler == 'function') {
+                    if (!('component' in handler)) {
                         if (handlerState.error) {
                             latestResult = await (handler as ErrorHandler)(handlerState.error, req, res);
                         }
