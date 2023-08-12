@@ -17,7 +17,8 @@ export const NEXT = 'next';
 export const NEXT_ROUTE = 'route';
 
 export function fluvial(options: ApplicationOptions = {}) {
-    const app = Application as __InternalApplication;
+    // the `bind` is necessary as Node tries to apply `this` to point to the server object
+    const app = Application.bind(Application) as __InternalApplication;
     
     Reflect.setPrototypeOf(app, applicationPrototype);
     
@@ -68,79 +69,82 @@ async function defaultErrorHandler(err: unknown, req: Request, res: Response) {
     }
 }
 
-const applicationPrototype = Object.create(routerPrototype, {
-    component: {
-        get() {
-            return 'application';
+const applicationPrototype = Object.create(
+    routerPrototype,
+    {
+        component: {
+            get() {
+                return 'application';
+            },
         },
-    },
-    listen: {
-        get() {
-            return function listen(this: __InternalApplication, port: number | string, callback?: () => void) {
-                if (isNaN(port as number)) {
-                    throw TypeError(`the provided port (${port}) was not a valid number`);
-                }
-                
-                if (!this.server) {
-                    if (!this.invokedOptions.ssl) {
-                        this.server = createServer(this.mainHandler);
+        listen: {
+            get() {
+                return function listen(this: __InternalApplication, port: number | string, callback?: () => void) {
+                    if (isNaN(port as number)) {
+                        throw TypeError(`the provided port (${port}) was not a valid number`);
                     }
-                    else if (
-                        this.invokedOptions.ssl &&
-                        (
+                    
+                    if (!this.server) {
+                        if (!this.invokedOptions.ssl) {
+                            this.server = createServer(this.mainHandler);
+                        }
+                        else if (
+                            this.invokedOptions.ssl &&
                             (
                                 (
-                                    this.invokedOptions.ssl.certificatePath || this.invokedOptions.ssl.certificate
-                                ) &&
+                                    (
+                                        this.invokedOptions.ssl.certificatePath || this.invokedOptions.ssl.certificate
+                                    ) &&
+                                    (
+                                        this.invokedOptions.ssl.key || this.invokedOptions.ssl.keyPath
+                                    )
+                                ) ||
                                 (
-                                    this.invokedOptions.ssl.key || this.invokedOptions.ssl.keyPath
+                                    (
+                                        this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath
+                                    ) &&
+                                    this.invokedOptions.ssl.passphrase
                                 )
-                            ) ||
-                            (
-                                (
-                                    this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath
-                                ) &&
-                                this.invokedOptions.ssl.passphrase
                             )
-                        )
-                    ) {
-                        if (this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath) {
-                            this.server = createSecureServer({
-                                allowHTTP1: true,
-                                pfx: this.invokedOptions.ssl.pfx || readFileSync(this.invokedOptions.ssl.pfxPath),
-                                passphrase: this.invokedOptions.ssl.passphrase,
-                            });
+                        ) {
+                            if (this.invokedOptions.ssl.pfx || this.invokedOptions.ssl.pfxPath) {
+                                this.server = createSecureServer({
+                                    allowHTTP1: true,
+                                    pfx: this.invokedOptions.ssl.pfx || readFileSync(this.invokedOptions.ssl.pfxPath),
+                                    passphrase: this.invokedOptions.ssl.passphrase,
+                                });
+                            }
+                            // .pem-formatted cert/key
+                            else {
+                                this.server = createSecureServer({
+                                    allowHTTP1: true,
+                                    cert: this.invokedOptions.ssl.certificate ||
+                                        readFileSync(this.invokedOptions.ssl.certificatePath),
+                                    key: this.invokedOptions.ssl.key ||
+                                        readFileSync(this.invokedOptions.ssl.keyPath),
+                                }, this.mainHandler);
+                            }
                         }
-                        // .pem-formatted cert/key
+                        else if (this.invokedOptions.ssl) {
+                            throw TypeError(`options provided are requesting that the server is spun up with SSL options, but the required options of certificate and key are not provided`);
+                        }
                         else {
-                            this.server = createSecureServer({
-                                allowHTTP1: true,
-                                cert: this.invokedOptions.ssl.certificate ||
-                                    readFileSync(this.invokedOptions.ssl.certificatePath),
-                                key: this.invokedOptions.ssl.key ||
-                                    readFileSync(this.invokedOptions.ssl.keyPath),
-                            }, this.mainHandler);
+                            throw Error('An unknown error occurred; please review the creation of the application');
                         }
                     }
-                    else if (this.invokedOptions.ssl) {
-                        throw TypeError(`options provided are requesting that the server is spun up with SSL options, but the required options of certificate and key are not provided`);
+                    
+                    if (this.server.listening) {
+                        // no need to try to listen again
+                        console.warn('Attempted to make a server listen when the server is already listening');
+                        return;
                     }
-                    else {
-                        throw Error('An unknown error occurred; please review the creation of the application');
-                    }
-                }
-                
-                if (this.server.listening) {
-                    // no need to try to listen again
-                    console.warn('Attempted to make a server listen when the server is already listening');
-                    return;
-                }
-                
-                this.server.listen(port, callback);
-            };
+                    
+                    this.server.listen(port, callback);
+                };
+            },
         },
     },
-});
+);
 
 interface ApplicationOptions {
     server?: Http2Server | Http2SecureServer;
