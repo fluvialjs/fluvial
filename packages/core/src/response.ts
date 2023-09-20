@@ -265,6 +265,10 @@ export class FluvialResponse extends Writable {
             stringifiedData = JSON.stringify(data);
         }
         
+        if (!this.headers['content-type']) {
+            this.headers['content-type'] = 'application/json';
+        }
+        
         return this.#send(stringifiedData);
     }
     
