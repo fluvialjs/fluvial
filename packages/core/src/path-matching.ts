@@ -30,9 +30,15 @@ export function getRouteParams(path: PathString, pathPattern: PathMatcher): Para
     else {
         const pathPortions = path.split('/');
         const patternPortions = pathPattern.split('/');
+        
         let params: Record<string, string> = {};
         
         for (let i = 0; i < pathPortions.length; i++) {
+            if (patternPortions.length > pathPortions.length) {
+                params = null;
+                break;
+            }
+            
             const currentPathPortion = pathPortions[i];
             const currentMatchPortion = patternPortions[i];
             
