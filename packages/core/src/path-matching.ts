@@ -1,6 +1,6 @@
 import { URL } from 'node:url';
 
-export function getRouteParams(path: PathString, pathPattern: PathMatcher): ParamsDictionary | false {
+export function getRouteParams(path: PathString, pathPattern: PathMatcher, exact?: boolean): ParamsDictionary | false {
     if (pathPattern instanceof RegExp) {
         const match = pathPattern.exec(path);
         
@@ -20,7 +20,7 @@ export function getRouteParams(path: PathString, pathPattern: PathMatcher): Para
     }
     else if (Array.isArray(pathPattern)) {
         for (const matcher of pathPattern) {
-            const result = getRouteParams(path, matcher);
+            const result = getRouteParams(path, matcher, exact);
             
             if (result) {
                 return result;
@@ -28,17 +28,19 @@ export function getRouteParams(path: PathString, pathPattern: PathMatcher): Para
         }
     }
     else {
-        const pathPortions = path.split('/');
-        const patternPortions = pathPattern.split('/');
+        // "slice" is used since if the code is doing it right, the first element will always be an empty string
+        const pathPortions = path.split('/').slice(1);
+        const patternPortions = pathPattern.split('/').slice(1);
+        if (patternPortions.length > pathPortions.length) {
+            return null;
+        }
+        if (exact && pathPortions.length > patternPortions.length) {
+            return null;
+        }
         
         let params: Record<string, string> = {};
         
         for (let i = 0; i < pathPortions.length; i++) {
-            if (patternPortions.length > pathPortions.length) {
-                params = null;
-                break;
-            }
-            
             const currentPathPortion = pathPortions[i];
             const currentMatchPortion = patternPortions[i];
             
