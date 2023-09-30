@@ -235,7 +235,13 @@ export const routerPrototype = {
                 // `return`ing inside of a genrator function just completes it; no value is passed back
                 return;
             }
-            const params = getRouteParams(state.path, route.pathMatcher);
+            const params = getRouteParams(
+                state.path,
+                route.pathMatcher,
+                route.pathMatcher instanceof RegExp ?
+                    route.pathMatcher.source.endsWith('$') :
+                    route.handlers.every(([ method ]) => method != 'ALL'),
+            );
             
             if (params) {
                 Object.assign(state.req.params, params);
