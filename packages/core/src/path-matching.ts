@@ -34,7 +34,7 @@ export function getRouteParams(path: PathString, pathPattern: PathMatcher, exact
         if (patternPortions.length > pathPortions.length) {
             return null;
         }
-        if (exact && pathPortions.length > patternPortions.length) {
+        if (exact && pathPortions.length > patternPortions.length && !patternPortions.includes('**')) {
             return null;
         }
         
