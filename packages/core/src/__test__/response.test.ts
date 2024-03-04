@@ -4,7 +4,8 @@ import { createHttp1Response, createHttp2Response } from './utilities/mock-respo
 import { createHttp2Request } from './utilities/mock-requests.js';
 import { FluvialRequest } from '../request.js';
 
-describe('fluvial response', () => {
+
+describe('fluvial response basics', () => {
     test('when given a raw http/2 response, it builds correctly', () => {
         const res = new FluvialResponse(createHttp2Response());
         
@@ -50,8 +51,10 @@ describe('fluvial response', () => {
         expect(Object.keys(res.headers).length).toBe(3);
         expect(res.headers['crazy-with-capitals']).toBe('bar');
     });
-    
-    test('sending data formatted for http/2 transport will work as intended', () => {
+});
+
+describe('sending fluvial responses', () => {
+    test('sending JSON data formatted for http/2 transport will work as intended', async () => {
         const payload = {
             message: 'foo',
         };
@@ -74,7 +77,7 @@ describe('fluvial response', () => {
         
         Object.assign(res.headers, headers);
         
-        res.status(targetStatus)
+        await res.status(targetStatus)
             .send(payload);
         
         expect(chunks.length).toBeTruthy();
@@ -82,12 +85,12 @@ describe('fluvial response', () => {
         const rawPayload = chunks.toString('utf-8');
         
         expect(rawPayload).toContain(JSON.stringify(payload));
-        expect(rawPayload).toContain(':status ' + targetStatus);
-        expect(rawPayload).toMatch(/^accept /m);
-        expect(rawPayload).toMatch(/^content-type /m);
+        expect(rawPayload).toMatch(new RegExp('^:status: ' + targetStatus, 'm'));
+        expect(rawPayload).toMatch(/^accept: /m);
+        expect(rawPayload).toMatch(/^content-type: /m);
     });
     
-    test('sending data formatted as http/1.1 will work as expected', async () => {
+    test('sending JSON data formatted as http/1.1 will work as expected', async () => {
         const payload = {
             message: 'foo',
         };
@@ -117,5 +120,51 @@ describe('fluvial response', () => {
         
         expect(rawPayload).toContain(JSON.stringify(payload));
         expect(rawPayload).toContain(targetStatus);
+    });
+    
+    test('sending binary data formatted for http/2 transport will work as intended', async () => {
+        const payload = Buffer.from('some sort of binary data');
+        
+        let chunks = Buffer.from([]);
+        
+        const res = new FluvialResponse(createHttp2Response((chunk) => {
+            chunks = Buffer.concat([ chunks, chunk ]);
+        }));
+        
+        // @ts-ignore
+        res.request = {
+            httpVersion: '2.0',
+        };
+        
+        await res.send(payload);
+        
+        expect(chunks.length).toBeTruthy();
+        
+        const rawPayload = chunks.toString('utf-8');
+        
+        expect(rawPayload).toContain(':status: ' + 200);
+        expect(rawPayload).toContain('content-type: application/octet-stream');
+        expect(chunks.includes(payload)).toBeTruthy();
+    });
+    
+    test('sending binary data formatted as http/1.1 will work as expected', async () => {
+        const payload = Buffer.from('some sort of binary data');
+        
+        let chunks = Buffer.from([]);
+        
+        const res = new FluvialResponse(createHttp1Response((chunk) => {
+            chunks = Buffer.concat([ chunks, chunk ]);
+        }));
+        
+        // @ts-ignore
+        res.request = {
+            httpVersion: '1.1',
+        };
+        await res.send(payload);
+        
+        const rawPayload = chunks.toString('utf-8');
+        
+        expect(chunks.includes(payload)).toBeTruthy();
+        expect(rawPayload).toContain(200);
     });
 });

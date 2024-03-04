@@ -1,6 +1,6 @@
 {
     "name": "fluvial",
-    "version": "0.4.6",
+    "version": "0.4.7",
     "description": "Fluvial:  A light http/2 server framework, similar to Express",
     "main": "dist/index.js",
     "files": [

@@ -13,7 +13,8 @@ declare global {
             readonly path: PathString;
             readonly method: SupportedHttpMethods;
             readonly headers: Readonly<IncomingHttpHeaders>;
-            readonly payload: any;
+            readonly payload?: any;
+            readonly rawPayload?: Buffer;
             readonly rawRequest: Http2ServerRequest | IncomingMessage;
             readonly params: Readonly<ParamsDictionary>;
             readonly query: Readonly<QueryDictionary>;

@@ -4,15 +4,18 @@ import { Response } from '../response.js';
 export function deserializeUrlencodedPayload(/* options?: DeserializeUrlencodedOptions */) {
     return async (req: Request, res: Response) => {
         if (req.headers['content-type'].includes('x-www-form-urlencoded')) {
+            let raw = Buffer.from([]);
             let data = '';
             
             for await (const chunk of req.rawRequest) {
+                raw = Buffer.concat([ raw, chunk ]);
                 data += (chunk as Buffer).toString('utf-8');
             }
             
             try {
                 const deserializedPayload = parse(data);
-                Object.defineProperty(req, 'payload',  { get() { return deserializedPayload; } });
+                Object.defineProperty(req, 'rawPayload', { get() { return raw } });
+                Object.defineProperty(req, 'payload', { get() { return deserializedPayload; } });
             }
             catch (e) {
                 console.error('fluvial.deserializeUrlencodedPayload:  Failed to deserialize as JSON the payload provided in this request');

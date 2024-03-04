@@ -25,6 +25,7 @@ export function deserializeFormDataPayload(options?: DeserializeFormDataOptions)
     
     return async (req: Request, res: Response) => {
         if (req.headers['content-type']?.includes('multipart/form-data')) {
+            let raw = Buffer.from([]);
             let data = '';
             
             const files: TempFileMap = {};
@@ -35,6 +36,7 @@ export function deserializeFormDataPayload(options?: DeserializeFormDataOptions)
             let currentWriteFileStream: Writable;
             
             for await (const chunk of req.rawRequest as { [Symbol.asyncIterator](): AsyncIterableIterator<Buffer> }) {
+                raw = Buffer.concat([ raw, chunk ]);
                 if (currentFileId && chunk.includes(formBoundaryBuffer)) {
                     currentFileId = null;
                     currentWriteFileStream.end();
@@ -63,6 +65,7 @@ export function deserializeFormDataPayload(options?: DeserializeFormDataOptions)
             
             try {
                 const deserializedPayload = parse(data, getBoundary(req.headers['content-type']), files);
+                Object.defineProperty(req, 'rawPayload', { get() { return raw } });
                 Object.defineProperty(req, 'payload',  { get() { return deserializedPayload; } });
             }
             catch (e) {
