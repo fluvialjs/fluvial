@@ -5,14 +5,17 @@ export function deserializeJsonPayload(options?: DeserializeJsonPayloadOptions) 
     const parse = options?.parse ?? JSON.parse;
     return async (req: Request, res: Response) => {
         if (req.headers['content-type']?.includes('json')) {
+            let raw = Buffer.from([]);
             let data = '';
             
             for await (const chunk of req.rawRequest) {
+                raw = Buffer.concat([ raw, chunk ]);
                 data += (chunk as Buffer).toString('utf-8');
             }
             
             try {
                 const deserializedPayload = parse(data);
+                Object.defineProperty(req, 'rawPayload', { get() { return raw } });
                 Object.defineProperty(req, 'payload',  { get() { return deserializedPayload; } });
             }
             catch (e) {

@@ -191,8 +191,16 @@ export class FluvialResponse extends Writable {
             throw TypeError('An attempt to close the response stream failed because the response is set up to be an event source and only clients are allowed to close such streams');
         }
         
-        // all overloads of writable.end will work here...
-        this.rawResponse.end(data as string);
+        if (typeof data == 'function') {
+            this.rawResponse.on('close', data);
+        }
+        
+        if (data && typeof data != 'function') {
+            this.rawResponse.end(data);
+        }
+        else {
+            this.rawResponse.end();
+        }
         
         return this;
     }
@@ -210,9 +218,12 @@ export class FluvialResponse extends Writable {
             this.stream(data);
             return;
         }
-        else if (data && typeof data == 'object') {
+        else if (data && typeof data == 'object' && !Buffer.isBuffer(data)) {
             this.json(data);
             return;
+        }
+        else if (Buffer.isBuffer(data) && !this.headers['content-type']) {
+            this.headers['content-type'] = 'application/octet-stream';
         }
         else if (data && !this.headers['content-type']) {
             this.headers['content-type'] = 'text/plain';
@@ -292,7 +303,19 @@ export class FluvialResponse extends Writable {
         return this;
     }
     
-    async #send(data?: string) {
+    async #send(data?: string | Buffer) {
+        const bytes = Buffer.isBuffer(data) ? data : typeof data == 'string' ? Buffer.from(data) : Buffer.from([]);
+        
+        for (const type of this.rawResponse.eventNames()) {
+            this.rawResponse.on(type, (...args) => {
+                console.log(type, args)
+            });
+        }
+        
+        if (bytes.byteLength) {
+            this.headers['content-length'] = String(bytes.byteLength);
+        }
+        
         if (this.httpVersion == '1.1') {
             (this.rawResponse as ServerResponse).writeHead(this.#status, { ...this.headers });
         }
@@ -303,8 +326,9 @@ export class FluvialResponse extends Writable {
             });
         }
         
-        if (data) {
-            this.write(Buffer.from(data));
+        if (bytes.byteLength) {
+            this.write(bytes, 'buffer' as BufferEncoding);
+            this.write('\r\n\r\n');
         }
         
         this.end();
