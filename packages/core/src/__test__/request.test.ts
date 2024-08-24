@@ -1,4 +1,5 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test } from 'node:test';
+import { equal, deepEqual } from 'node:assert';
 import { FluvialRequest } from '../request.js';
 import { createHttp2Request, createHttp1Request } from './utilities/mock-requests.js';
 
@@ -15,9 +16,9 @@ describe('Create a Fluvial request object', () => {
             ],
         ));
         
-        expect(req.path).toBe(path);
-        expect(req.query).toEqual({ foo: 'bar', baz: 'quux' });
-        expect(req.hash).toBe(hash);
+        equal(req.path, path);
+        deepEqual(req.query, { foo: 'bar', baz: 'quux' });
+        equal(req.hash, hash);
     });
     
     test('http/1.x requests break apart the path appropriately', () => {
@@ -32,9 +33,9 @@ describe('Create a Fluvial request object', () => {
             ],
         ));
         
-        expect(req.path).toBe(path);
-        expect(req.query).toEqual({ foo: 'bar', baz: 'quux' });
-        expect(req.hash).toBe(hash);
+        equal(req.path, path);
+        deepEqual(req.query, { foo: 'bar', baz: 'quux' });
+        equal(req.hash, hash);
     });
     
     test('request metadata (other than what\'s absolutely necessary) is immutable', () => {
@@ -54,7 +55,7 @@ describe('Create a Fluvial request object', () => {
             headersWereAltered = true;
         }
         catch {}
-        expect(headersWereAltered).toBe(false);
+        equal(headersWereAltered, false);
         
         try {
             // @ts-ignore
@@ -62,7 +63,7 @@ describe('Create a Fluvial request object', () => {
             headersWereAltered = true;
         }
         catch {}
-        expect(headersWereAltered).toBe(false);
+        equal(headersWereAltered, false);
         
         
         let queryWasAltered = false;
@@ -73,7 +74,7 @@ describe('Create a Fluvial request object', () => {
             queryWasAltered = true;
         }
         catch {}
-        expect(queryWasAltered).toBe(false);
+        equal(queryWasAltered, false);
         
         try {
             // @ts-ignore
@@ -81,7 +82,7 @@ describe('Create a Fluvial request object', () => {
             queryWasAltered = true;
         }
         catch {}
-        expect(queryWasAltered).toBe(false);
+        equal(queryWasAltered, false);
         
         
         let methodWasAltered = false;
@@ -92,7 +93,7 @@ describe('Create a Fluvial request object', () => {
             methodWasAltered = true;
         }
         catch {}
-        expect(methodWasAltered).toBe(false);
+        equal(methodWasAltered, false);
         
         
         let httpVersionWasAltered = false;
@@ -103,7 +104,7 @@ describe('Create a Fluvial request object', () => {
             httpVersionWasAltered = true;
         }
         catch {}
-        expect(httpVersionWasAltered).toBe(false);
+        equal(httpVersionWasAltered, false);
         
         
         let pathWasAltered = false;
@@ -114,7 +115,7 @@ describe('Create a Fluvial request object', () => {
             pathWasAltered = true;
         }
         catch {}
-        expect(pathWasAltered).toBe(false);
+        equal(pathWasAltered, false);
         
         // expect()
     });
@@ -136,7 +137,7 @@ describe('Create a Fluvial request object', () => {
             resultPayload.push(result);
         }
         
-        expect(resultPayload).toEqual(originalPayload);
+        deepEqual(resultPayload, originalPayload);
     });
     
     test('with an http/1.x request, the payload can be retreived from the `for await` loop', async () => {
@@ -156,7 +157,7 @@ describe('Create a Fluvial request object', () => {
             resultPayload.push(result);
         }
         
-        expect(resultPayload).toEqual(originalPayload);
+        deepEqual(resultPayload, originalPayload);
     });
     
     test('pausing and unpausing results in the right data', async () => {
@@ -197,11 +198,11 @@ describe('Create a Fluvial request object', () => {
             });
         });
         
-        expect(resultPayload).toEqual([
+        deepEqual(resultPayload, [
             originalPayload[0],
             // this happens because it buffers the remainder even when it pauses
             originalPayload.slice(1).join(''),
         ]);
-        expect(ranWhilePaused).toBeFalsy();
+        equal(ranWhilePaused, false);
     });
 });

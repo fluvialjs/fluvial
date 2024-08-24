@@ -2,16 +2,18 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {
         "types": [
-            "vitest",
             "node"
-        ]
+        ],
+        "composite": true
     },
     "include": [
-        "src/**/*.ts",
         "**/*.test.ts",
         "**/__test__/**/*.ts"
     ],
     "exclude": [
         "node_modules"
+    ],
+    "references": [
+        { "path": "./tsconfig.src.json" }
     ]
 }

@@ -1,9 +1,10 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test } from 'node:test';
+import { equal } from 'node:assert';
+import { Router } from 'express';
 import { __InternalRouter } from 'fluvial/dist/router.js';
 import { cors } from '@fluvial/cors';
 import { csp } from '@fluvial/csp';
 import { toExpress } from '../to-express.js';
-import { Router } from 'express';
 import { createExpressRequest, createExpressResponse } from './utilities/express-mocks.js';
 
 describe('`@fluvial/cors` middleware', () => {
@@ -54,15 +55,13 @@ describe('`@fluvial/cors` middleware', () => {
             result = e;
         }
         
-        expect(nextCalled).toBeTruthy();
-        expect(errored).toBeFalsy();
-        expect(result).toBeFalsy();
+        equal(nextCalled, true);
+        equal(errored, false);
+        equal(result, null);
         
-        expect(res.headersSent).toBeFalsy();
+        equal(res.headersSent, false);
         // only checking for one of the headers should be enough
-        expect(res.getHeaders()).toContain({
-            'access-control-allow-origin': '*'
-        });
+        equal(res.getHeaders()?.['access-control-allow-origin'], '*');
     });
     
     test('the request should not pass on with an options request', async () => {
@@ -119,16 +118,14 @@ describe('`@fluvial/cors` middleware', () => {
             result = e;
         }
         
-        expect(nextCalled).toBeFalsy();
-        expect(errored).toBeFalsy();
-        expect(result).toBeFalsy();
+        equal(nextCalled, false);
+        equal(errored, false);
+        equal(result, null);
         
         // only thing that should be true was sending the request
-        expect(res.headersSent).toBeTruthy();
+        equal(res.headersSent, true);
         // only checking for one of the headers should be enough
-        expect(res.getHeaders()).toContain({
-            'access-control-allow-origin': '*'
-        });
+        equal(res.getHeaders()?.['access-control-allow-origin'], '*');
     });
 });
 
@@ -180,13 +177,13 @@ describe('`@fluvial/csp` middleware', () => {
             result = e;
         }
         
-        expect(nextCalled).toBeTruthy();
-        expect(errored).toBeFalsy();
-        expect(result).toBeFalsy();
+        equal(nextCalled, true);
+        equal(errored, false);
+        equal(result, null);
         
-        expect(res.headersSent).toBeFalsy();
+        equal(res.headersSent, false);
         // only checking for one of the headers should be enough
-        expect('content-security-policy' in res.getHeaders()).toBeTruthy();
+        equal('content-security-policy' in res.getHeaders(), true);
     });
     
     test('the header will be set correctly when configured', async () => {
@@ -238,12 +235,12 @@ describe('`@fluvial/csp` middleware', () => {
             result = e;
         }
         
-        expect(nextCalled).toBeTruthy();
-        expect(errored).toBeFalsy();
-        expect(result).toBeFalsy();
+        equal(nextCalled, true);
+        equal(errored, false);
+        equal(result, null);
         
-        expect(res.headersSent).toBeFalsy();
+        equal(res.headersSent, false);
         // only checking for one of the headers should be enough
-        expect('content-security-policy-report-only' in res.getHeaders()).toBeTruthy();
+        equal('content-security-policy-report-only' in res.getHeaders(), true);
     });
 });

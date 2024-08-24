@@ -19,6 +19,14 @@ export function serveFiles(rootPath: string, options?: ServeFilesOptions) {
         // proprietary header might be...changed out for something that works better
         const skipCache = options?.noCache || req.headers['refresh-file'] == 'true';
         
+        if (options?.allowedOmittedExtensions) {
+            for (const extension of options.allowedOmittedExtensions) {
+                if (existsSync(assetPath + extension)) {
+                    return sendFile(req, res, { assetPath: assetPath + extension, skipCache });
+                }
+            }
+        }
+        
         if (!existsSync(assetPath) || (await stat(assetPath)).isDirectory()) {
             return 'next' as const;
         }
@@ -46,11 +54,11 @@ export function serveFile(filePath: string, options?: ServeFileOptions) {
         // proprietary header might be...changed out for something that works better
         const skipCache = options?.noCache || req.headers['refresh-file'] == 'true';
         
-        await sendFile(req, res, { assetPath: filePath, skipCache });
+        return sendFile(req, res, { assetPath: filePath, skipCache });
     };
 }
 
-async function sendFile(req: Request, res: Response, options?: { assetPath: string, skipCache: boolean }) {
+async function sendFile(req: Request, res: Response, options?: { assetPath?: string, skipCache?: boolean }) {
     const { assetPath } = options;
     
     const fileStats = await stat(assetPath);
@@ -108,7 +116,7 @@ async function sendFile(req: Request, res: Response, options?: { assetPath: stri
 
 interface ServeFilesOptions {
     noCache?: boolean;
-    
+    allowedOmittedExtensions?: string[];
 }
 
 interface ServeFileOptions {

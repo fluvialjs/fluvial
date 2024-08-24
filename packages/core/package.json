@@ -3,15 +3,17 @@
     "version": "0.4.7",
     "description": "Fluvial:  A light http/2 server framework, similar to Express",
     "main": "dist/index.js",
+    "types": "dist/index.d.ts",
     "files": [
         "dist/**/*",
         "README.md"
     ],
     "type": "module",
     "scripts": {
-        "compile": "tsc -b",
-        "test": "vitest",
-        "test:coverage": "pnpm test --coverage",
+        "ex": "node --import ./register-ts-esm.js",
+        "compile": "tsc --project tsconfig.src.json",
+        "test": "pnpm ex -- --test **/*.test.ts",
+        "test:coverage": "pnpm ex --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
         "prepublish": "pnpm test run && pnpm compile"
     },
     "keywords": [
@@ -34,17 +36,12 @@
     },
     "license": "GPL-3.0-only",
     "devDependencies": {
-        "@types/mime": "^3.0.1",
-        "@types/node": "^20.4.1",
-        "@vitest/coverage-c8": "^0.28.1",
-        "pnpm": "^7.26.0",
-        "rimraf": "^4.1.2",
-        "ts-node": "^10.9.1",
-        "typescript": "^5.1.6",
-        "vite": "^4.0.4",
-        "vitest": "^0.28.1"
+        "@types/node": "catalog:",
+        "pnpm": "catalog:",
+        "ts-node": "catalog:",
+        "typescript": "catalog:"
     },
     "dependencies": {
-        "mime": "^3.0.0"
+        "mime": "^4.0.4"
     }
 }

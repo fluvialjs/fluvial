@@ -11,13 +11,13 @@
             "node"
         ],
         "target": "ESNext",
-        "outDir": "dist",
         "sourceMap": true,
         "declaration": true,
         "skipLibCheck": true,
         "resolveJsonModule": true,
         "strict": false,
-        "strictNullChecks": false
+        "strictNullChecks": false,
+        "noEmit": true
     },
     "include": [
         "scripts"
