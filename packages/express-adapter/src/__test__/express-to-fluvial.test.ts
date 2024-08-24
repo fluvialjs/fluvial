@@ -1,7 +1,11 @@
+import { afterEach, describe, test } from 'node:test';
+import { equal } from 'node:assert';
+import { promisify } from 'node:util';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
-import { describe, test, expect, afterEach } from 'vitest';
+import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
 import { Router as FluvialRouter, deserializeJsonPayload } from 'fluvial';
 import { FluvialRequest, type Request } from 'fluvial/dist/request.js';
 import { FluvialResponse, type Response } from 'fluvial/dist/response.js';
@@ -9,9 +13,6 @@ import { createHttp2Request } from 'fluvial/src/__test__/utilities/mock-requests
 import { createHttp2Response } from 'fluvial/src/__test__/utilities/mock-responses.js';
 import type { __InternalRouter } from 'fluvial/dist/router';
 import { toFluvial } from '../to-fluvial.js';
-import passport from 'passport';
-import { Strategy as LocalStrategy } from 'passport-local';
-import { promisify } from 'util';
 
 describe('`cors` middleware', () => {
     test('default middleware works as expected when converted from Express to Fluvial', async () => {
@@ -28,7 +29,7 @@ describe('`cors` middleware', () => {
         
         const result = await testRouter.handleRequest('/', '', req, res);
         
-        expect(result).toBe('next');
+        equal(result, 'next');
     });
     
     test('an options request will result in stopping the request flow', async () => {
@@ -45,7 +46,7 @@ describe('`cors` middleware', () => {
         
         const result = await testRouter.handleRequest('/', '', req, res);
         
-        expect(result).toBeUndefined();
+        equal(result, null);
     });
 });
 
@@ -64,7 +65,7 @@ describe('`helmet` middleware', () => {
         
         const result = await testRouter.handleRequest('/', '', req, res);
         
-        expect(result).toBe('next');
+        equal(result, 'next');
     });
 });
 
@@ -87,7 +88,7 @@ describe('`express-session` middleware', () => {
         
         const result = await testRouter.handleRequest('/', '', req, res);
         
-        expect(result).toBe('next');
+        equal(result, 'next');
     });
 });
 
@@ -129,25 +130,25 @@ describe('`passport`/`passport-local` middleware', () => {
         
         const result = await testRouter.handleRequest('/', '', req, res);
         
-        expect(result).toBe('next');
+        equal(result, 'next');
         // @ts-expect-error because passport's typings modify Express's typings, not Fluvial's typings
-        expect(req.user?.id).toBe(1);
+        equal(req.user?.id, 1);
         
         // @ts-expect-error
-        expect(req.logOut).toBeInstanceOf(Function);
+        equal(req.logOut instanceof Function, true);
         // @ts-expect-error
         await promisify(req.logOut.bind(req) as Express.Request['logOut'])({ session: false });
         
         // @ts-expect-error
-        expect(req.user).toBeFalsy();
+        equal(Boolean(req.user), false);
         
         // @ts-expect-error
-        expect(req.logIn).toBeInstanceOf(Function);
+        equal(req.logIn instanceof Function, true);
         // @ts-expect-error
         await promisify(req.logIn.bind(req) as Express.Request['logIn'])({ id: 2 }, { session: false });
         
         // @ts-expect-error
-        expect(req.user?.id).toBe(2);
+        equal(req.user?.id, 2);
     });
     
     test('passing an incomplete or empty request payload stops the request cycle', async () => {
@@ -182,6 +183,6 @@ describe('`passport`/`passport-local` middleware', () => {
         
         const result = await testRouter.handleRequest('/', '', req, res);
         
-        expect(result).toBeUndefined();
+        equal(result, null);
     });
 });

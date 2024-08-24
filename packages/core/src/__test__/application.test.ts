@@ -1,4 +1,5 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test } from 'node:test';
+import { equal } from 'node:assert';
 import { __InternalApplication, fluvial } from '../index.js';
 import { createHttp2Request } from './utilities/mock-requests.js';
 import { createHttp2Response } from './utilities/mock-responses.js';
@@ -7,7 +8,7 @@ describe('fluvial application', () => {
     test('creating an application with no options works', () => {
         const app = fluvial();
         
-        expect(app).toBeTruthy();
+        equal(Boolean(app), true);
     });
     
     test('providing an application with a raw request and a raw response will result in the request/response lifecycle to trigger as appropriate', async () => {
@@ -39,14 +40,14 @@ describe('fluvial application', () => {
             catchReached = true;
         });
         
-        expect(app.routes.length).toBe(3);
+        equal(app.routes.length, 3);
         
         await app(createHttp2Request('/', 'GET'), createHttp2Response());
         await app(createHttp2Request('/', 'POST'), createHttp2Response());
         await app(createHttp2Request('/?error=true', 'GET'), createHttp2Response());
         
-        expect(getReached).toBe(true);
-        expect(postReached).toBe(true);
-        expect(catchReached).toBe(true);
+        equal(getReached, true);
+        equal(postReached, true);
+        equal(catchReached, true);
     });
 });

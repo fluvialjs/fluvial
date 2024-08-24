@@ -1,4 +1,5 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test } from 'node:test';
+import { equal } from 'node:assert';
 import { Request } from '../request.js';
 import { Response } from '../response.js';
 import { Router, __InternalRouter } from '../router.js';
@@ -6,7 +7,7 @@ import { Router, __InternalRouter } from '../router.js';
 describe('router', () => {
     describe('path matching', () => {
         // NOTE: These tests will only test the path matching abilities once; the underlying path-matching logic is handled in other tests
-        test('given a router with a single "get" request registered and a matching path, it will call the "get" handler', async () => {
+        test('given a router with a single "get" request registered and a matching path, it will call the "get" handler', { timeout: 300000 }, async () => {
             const router = Router() as __InternalRouter;
             
             let visited = false;
@@ -21,9 +22,9 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBeFalsy();
-            expect(visited).toBe(true);
-        }, 300000);
+            equal(result, null);
+            equal(visited, true);
+        });
         
         test('given a router with a single "get" request registered and not a matching path, it will not call the "get" handler', async () => {
             const router = Router() as __InternalRouter;
@@ -40,8 +41,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBe('next');
-            expect(visited).toBe(false);
+            equal(result, 'next');
+            equal(visited, false);
         });
     });
     
@@ -61,8 +62,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBeFalsy();
-            expect(visited).toBe(true);
+            equal(result, null);
+            equal(visited, true);
         });
         
         test('given a router with a "post" handler registered and request with the same path but different method, it will not call the handler', async () => {
@@ -80,8 +81,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBe('next');
-            expect(visited).toBe(false);
+            equal(result, 'next');
+            equal(visited, false);
         });
         
         test('given a router with a "put" handler registered and request with the same path but different method, it will not call the handler', async () => {
@@ -99,8 +100,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBe('next');
-            expect(visited).toBe(false);
+            equal(result, 'next');
+            equal(visited, false);
         });
     });
     
@@ -122,8 +123,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBe('next');
-            expect(visited).toBe(true);
+            equal(result, 'next');
+            equal(visited, true);
         });
         
         test('given a router with two handlers where the first returns a "next", it will stop at the second handler and go no farther', async () => {
@@ -143,8 +144,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBe('next');
-            expect(visited).toBe(true);
+            equal(result, 'next');
+            equal(visited, true);
         });
         
         test('given a router with two routes with matching criteria, if the first doesn\'t pass on the request, the second doesn\'t get called', async () => {
@@ -165,8 +166,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBeFalsy();
-            expect(secondVisited).toBe(false);
+            equal(result, null);
+            equal(secondVisited, false);
         });
         
         test('given a router with two routes with matching criteria, if the first passes on the request, the second gets called', async () => {
@@ -185,8 +186,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBeFalsy();
-            expect(secondVisited).toBe(true);
+            equal(result, null);
+            equal(secondVisited, true);
         });
     });
     
@@ -209,8 +210,8 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBeFalsy();
-            expect(subRouterVisited).toBe(true);
+            equal(result, null);
+            equal(subRouterVisited, true);
         });
         
         test('path reduction with route params works for sub-routers', async () => {
@@ -229,9 +230,9 @@ describe('router', () => {
             
             const result = await mainRouter.handleRequest('/1234/sub', '/', req, {} as Response);
             
-            expect(result).toBeFalsy();
-            expect(subRouterVisited).toBe(true);
-            expect(req.params.id).toBe('1234');
+            equal(result, null);
+            equal(subRouterVisited, true);
+            equal(req.params.id, '1234');
         });
     });
     
@@ -260,9 +261,9 @@ describe('router', () => {
                 query: {},
             } as Request, {} as Response);
             
-            expect(result).toBeFalsy();
-            expect(errorHandlerVisited).toBe(true);
-            expect(secondRequestHandlerVisited).toBe(false);
+            equal(result, null);
+            equal(errorHandlerVisited, true);
+            equal(secondRequestHandlerVisited, false);
         });
     });
     
@@ -293,8 +294,8 @@ describe('router', () => {
             query: {},
         } as Request, {} as Response);
         
-        expect(result).toBeFalsy();
-        expect(secondErrorHandlerVisited).toBe(true);
-        expect(sameErrorUsed).toBe(true);
+        equal(result, null);
+        equal(secondErrorHandlerVisited, true);
+        equal(sameErrorUsed, true);
     });
 });

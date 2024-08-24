@@ -2,12 +2,12 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {
         "types": [
-            "vitest",
             "node"
         ],
         "rootDir": "src",
         "strict": false,
-        "strictNullChecks": false
+        "strictNullChecks": false,
+        "composite": true
     },
     "include": [
         "**/*.test.ts",
@@ -15,5 +15,8 @@
     ],
     "exclude": [
         "node_modules"
+    ],
+    "references": [
+        { "path": "./tsconfig.src.json" }
     ]
 }

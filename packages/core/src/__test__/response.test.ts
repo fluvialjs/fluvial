@@ -1,4 +1,5 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test } from 'node:test';
+import { equal, match } from 'node:assert';
 import { FluvialResponse } from '../response.js';
 import { createHttp1Response, createHttp2Response } from './utilities/mock-responses.js';
 import { createHttp2Request } from './utilities/mock-requests.js';
@@ -9,21 +10,21 @@ describe('fluvial response basics', () => {
     test('when given a raw http/2 response, it builds correctly', () => {
         const res = new FluvialResponse(createHttp2Response());
         
-        expect(res).toBeTruthy();
+        equal(Boolean(res), true);
     });
     
     test('when given a raw http/1.1 response, it builds correctly', () => {
         const res = new FluvialResponse(createHttp1Response());
         
-        expect(res).toBeTruthy();
+        equal(Boolean(res), true);
     });
     
     test('setting a status and getting a status works as intended', () => {
         const res = new FluvialResponse(createHttp2Response());
         
-        expect(res.status()).toBe(200);
-        expect(res.status(401)).toBe(res);
-        expect(res.status()).toBe(401);
+        equal(res.status(), 200);
+        equal(res.status(401), res);
+        equal(res.status(), 401);
     });
     
     test('setting and getting the eventSource status works as intended', () => {
@@ -32,9 +33,9 @@ describe('fluvial response basics', () => {
             value: new FluvialRequest(createHttp2Request('/', 'GET')),
         });
         
-        expect(res.asEventSource()).toBeFalsy();
-        expect(res.asEventSource(true)).toBe(res);
-        expect(res.asEventSource()).toBeTruthy();
+        equal(res.asEventSource(), false);
+        equal(res.asEventSource(true), res);
+        equal(res.asEventSource(), true);
     });
     
     test('setting headers works as expected', () => {
@@ -48,8 +49,8 @@ describe('fluvial response basics', () => {
         
         Object.assign(res.headers, sourceHeaders);
         
-        expect(Object.keys(res.headers).length).toBe(3);
-        expect(res.headers['crazy-with-capitals']).toBe('bar');
+        equal(Object.keys(res.headers).length, 3);
+        equal(res.headers['crazy-with-capitals'], 'bar');
     });
 });
 
@@ -80,14 +81,14 @@ describe('sending fluvial responses', () => {
         await res.status(targetStatus)
             .send(payload);
         
-        expect(chunks.length).toBeTruthy();
+        equal(Boolean(chunks.length), true);
         
         const rawPayload = chunks.toString('utf-8');
         
-        expect(rawPayload).toContain(JSON.stringify(payload));
-        expect(rawPayload).toMatch(new RegExp('^:status: ' + targetStatus, 'm'));
-        expect(rawPayload).toMatch(/^accept: /m);
-        expect(rawPayload).toMatch(/^content-type: /m);
+        equal(rawPayload.includes(JSON.stringify(payload)), true);
+        match(rawPayload, new RegExp('^:status: ' + targetStatus, 'm'));
+        match(rawPayload, /^accept: /m);
+        match(rawPayload, /^content-type: /m);
     });
     
     test('sending JSON data formatted as http/1.1 will work as expected', async () => {
@@ -118,8 +119,8 @@ describe('sending fluvial responses', () => {
         
         const rawPayload = chunks.toString('utf-8');
         
-        expect(rawPayload).toContain(JSON.stringify(payload));
-        expect(rawPayload).toContain(targetStatus);
+        equal(rawPayload.includes(JSON.stringify(payload)), true);
+        equal(rawPayload.includes(targetStatus.toString()), true);
     });
     
     test('sending binary data formatted for http/2 transport will work as intended', async () => {
@@ -138,13 +139,13 @@ describe('sending fluvial responses', () => {
         
         await res.send(payload);
         
-        expect(chunks.length).toBeTruthy();
+        equal(Boolean(chunks.length), true);
         
         const rawPayload = chunks.toString('utf-8');
         
-        expect(rawPayload).toContain(':status: ' + 200);
-        expect(rawPayload).toContain('content-type: application/octet-stream');
-        expect(chunks.includes(payload)).toBeTruthy();
+        equal(rawPayload.includes(':status: ' + 200), true);
+        equal(rawPayload.includes('content-type: application/octet-stream'), true);
+        equal(chunks.includes(payload), true);
     });
     
     test('sending binary data formatted as http/1.1 will work as expected', async () => {
@@ -164,7 +165,7 @@ describe('sending fluvial responses', () => {
         
         const rawPayload = chunks.toString('utf-8');
         
-        expect(chunks.includes(payload)).toBeTruthy();
-        expect(rawPayload).toContain(200);
+        equal(chunks.includes(payload), true);
+        equal(rawPayload.includes(200..toString()), true);
     });
 });

@@ -8,9 +8,10 @@
         "README.md"
     ],
     "scripts": {
-        "compile": "tsc -b",
-        "test": "vitest",
-        "test:coverage": "pnpm test -- --coverage",
+        "ex": "node --import ./register-ts-esm.js",
+        "compile": "tsc --project tsconfig.src.json",
+        "test": "pnpm ex -- --test **/*.test.ts",
+        "test:coverage": "pnpm ex --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
         "prepublish": "pnpm test run && pnpm compile"
     },
     "description": "Express middleware to Fluvial middleware or vice versa adapter",
@@ -36,22 +37,21 @@
     "devDependencies": {
         "@fluvial/cors": "link:../cors",
         "@fluvial/csp": "link:../csp",
-        "@types/cors": "^2.8.13",
-        "@types/express": "^4.17.17",
-        "@types/express-session": "^1.17.7",
-        "@types/node": "^20.4.1",
-        "@types/passport": "^1.0.12",
-        "@types/passport-local": "^1.0.35",
-        "@vitest/coverage-v8": "^0.33.0",
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.21",
+        "@types/express-session": "^1.18.0",
+        "@types/node": "catalog:",
+        "@types/passport": "^1.0.16",
+        "@types/passport-local": "^1.0.38",
         "cors": "^2.8.5",
-        "express": "^4.18.2",
-        "express-session": "^1.17.3",
+        "express": "^4.19.2",
+        "express-session": "^1.18.0",
         "fluvial": "link:../core",
-        "helmet": "^7.0.0",
-        "passport": "^0.6.0",
+        "helmet": "^7.1.0",
+        "passport": "^0.7.0",
         "passport-local": "^1.0.0",
-        "typescript": "^5.1.6",
-        "vitest": "^0.33.0"
+        "ts-node": "catalog:",
+        "typescript": "catalog:"
     },
     "peerDependencies": {
         "fluvial": ">=0.4.0"

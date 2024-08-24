@@ -11,14 +11,27 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
-            "args": [
-                "--coverage"
+            "runtimeArgs": [
+                "--import",
+                "file://${workspaceFolder}/register-ts-esm.js",
+                "--test",
+                "--watch"
             ],
+            "args": [
+                "**/*.test.ts"
+                // "--coverage",
+            ],
+            "env": {
+                "TS_NODE_PROJECT": "${workspaceFolder}/packages/core/tsconfig.test.json"
+            },
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            // "cwd": "${workspaceFolder}/packages/core",
+            // "cwd": "${workspaceFolder}/packages/cors",
+            // "cwd": "${workspaceFolder}/packages/csp",
+            "cwd": "${workspaceFolder}/packages/express-adapter"
         }
     ]
 }

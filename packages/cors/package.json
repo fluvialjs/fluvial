@@ -8,9 +8,10 @@
         "README.md"
     ],
     "scripts": {
-        "compile": "tsc -b",
-        "test": "vitest",
-        "test:coverage": "pnpm test -- --coverage",
+        "ex": "node --import ./register-ts-esm.js",
+        "compile": "tsc --project tsconfig.src.json",
+        "test": "pnpm ex -- --test **/*.test.ts",
+        "test:coverage": "pnpm ex --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
         "prepublish": "pnpm test run && pnpm compile"
     },
     "description": "A fluvial-compatible Cross-Origin Resource Sharing middleware",
@@ -34,10 +35,8 @@
     },
     "license": "GPL-3.0-only",
     "devDependencies": {
-        "@types/node": "^20.4.1",
-        "@vitest/coverage-v8": "^0.33.0",
-        "typescript": "^5.1.6",
-        "vitest": "^0.33.0"
+        "@types/node": "catalog:",
+        "typescript": "catalog:"
     },
     "peerDependencies": {
         "fluvial": ">=0.4.0"

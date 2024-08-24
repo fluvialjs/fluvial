@@ -1,6 +1,6 @@
-import { IncomingMessage, IncomingHttpHeaders } from 'http';
-import { Http2ServerRequest } from 'http2';
-import { Readable } from 'stream';
+import { IncomingMessage, IncomingHttpHeaders } from 'node:http';
+import { Http2ServerRequest } from 'node:http2';
+import { Readable } from 'node:stream';
 
 
 export function createHttp2Request(

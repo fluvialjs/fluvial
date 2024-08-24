@@ -1,5 +1,5 @@
-import { IncomingMessage, ServerResponse } from 'http';
-import { Http2ServerResponse } from 'http2';
+import { IncomingMessage, ServerResponse } from 'node:http';
+import { Http2ServerResponse, ServerHttp2Stream } from 'node:http2';
 
 
 export function createHttp2Response(onWrite?: (data: Buffer) => void) {
@@ -66,6 +66,9 @@ export function createHttp2Response(onWrite?: (data: Buffer) => void) {
         removeListener(type: string, listener?: (...args: any[]) => void) {
             
         },
+        get finished() {
+            return response.writableFinished;
+        },
     }, {
         get(target, key) {
             if (typeof key == 'symbol' && key.description == 'nodejs.webstream.isClosedPromise') {
@@ -93,7 +96,7 @@ export function createHttp2Response(onWrite?: (data: Buffer) => void) {
         },
     });
     
-    const response = new Http2ServerResponse(responseStream);
+    const response = new Http2ServerResponse(responseStream as unknown as ServerHttp2Stream);
     
     Object.defineProperty(response, '_writableState', { get() { return responseStream._writableState; } });
     
@@ -113,8 +116,8 @@ export function createHttp2Response(onWrite?: (data: Buffer) => void) {
 export function createHttp1Response(onWrite?: (data: Buffer) => void) {
     const headers = {};
     let headersSent = false;
-    let resolve: (value?: any) => void = null!;
-    let reject: (reason?: any) => void = null!;
+    let resolve: (value?: any) => void = null;
+    let reject: (reason?: any) => void = null;
     let finishedObj = {
         promise: new Promise((_resolve, _reject) => {
             resolve = _resolve;
@@ -147,7 +150,9 @@ export function createHttp1Response(onWrite?: (data: Buffer) => void) {
                 write(Buffer.from('\r\n\r\n'));
             }
             resolve();
+            message.finished = true;
         },
+        finished: false,
         getWriter() {},
         abort() {},
         get headersSent() { return headersSent },

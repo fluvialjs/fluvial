@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { ServerResponse } from 'node:http';
 import { Http2ServerResponse, constants } from 'node:http2';
 import { Readable, Writable } from 'node:stream';
-import { finished } from 'node:stream/promises';
 import { Request } from './request.js';
+import { streamFinished } from './utilities/streams.js';
 
 declare global {
     namespace Fluvial {
@@ -333,7 +333,7 @@ export class FluvialResponse extends Writable {
         
         this.end();
         
-        await finished(this.rawResponse);
+        await streamFinished(this.rawResponse);
         
         return this;
     }
