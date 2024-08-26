@@ -1,6 +1,6 @@
 {
     "name": "fluvial-^$#root",
-    "version": "0.4.7",
+    "version": "0.5.0",
     "description": "Fluvial:  A light http/2 server framework, similar to Express",
     "main": "dist/index.js",
     "private": true,
@@ -10,10 +10,10 @@
     ],
     "type": "module",
     "scripts": {
-        "prebump-version": "pnpm test run",
-        "bump-version": "node --loader ts-node/esm -r ts-node/register scripts/increment-version.ts",
-        "test": "node --import ./register-ts-esm.js --test",
-        "test:coverage": "pnpm test --coverage"
+        "ex": "pnpm tsx",
+        "prebump-version": "pnpm -r test",
+        "bump-version": "pnpm ex scripts/increment-version.ts",
+        "test": "pnpm ex --test"
     },
     "keywords": [
         "http/2",
@@ -38,7 +38,7 @@
         "@types/node": "^22.4.1",
         "ansi-colors": "^4.1.3",
         "pnpm": "^9.7.1",
-        "ts-node": "^10.9.2",
+        "tsx": "^4.18.0",
         "typescript": "^5.5.4"
     },
     "dependencies": {

@@ -8,8 +8,8 @@ import {
 } from 'node:http2';
 import { readFileSync } from 'node:fs';
 import { IncomingMessage, ServerResponse } from 'node:http';
-import { FluvialRequest, Request } from './request.js';
-import { FluvialResponse, Response } from './response.js';
+import { FluvialRequest, type Request } from './request.js';
+import { FluvialResponse, type Response } from './response.js';
 import { Router, routerPrototype, __InternalRouter } from './router.js';
 export * from './middleware/index.js';
 
