@@ -1,6 +1,6 @@
 {
     "name": "@fluvial/express-adapter",
-    "version": "0.4.7",
+    "version": "0.5.0",
     "main": "dist/index.js",
     "files": [
         "dist/**/*",
@@ -8,11 +8,11 @@
         "README.md"
     ],
     "scripts": {
-        "ex": "node --import ./register-ts-esm.js",
+        "ex": "pnpm tsx",
         "compile": "tsc --project tsconfig.src.json",
-        "test": "pnpm ex -- --test **/*.test.ts",
-        "test:coverage": "pnpm ex --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
-        "prepublish": "pnpm test run && pnpm compile"
+        "test": "pnpm ex --tsconfig=tsconfig.test.json --test src/**/*.test.ts",
+        "test:coverage": "pnpm ex --tsconfig=tsconfig.test.json --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
+        "prepublish": "pnpm test && pnpm compile"
     },
     "description": "Express middleware to Fluvial middleware or vice versa adapter",
     "keywords": [

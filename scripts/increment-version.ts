@@ -3,7 +3,7 @@ import { URL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { emitKeypressEvents, Key } from 'node:readline';
 import ansiColors from 'ansi-colors';
-import packageJson from '../package.json' assert { type: 'json' };
+import packageJson from '../package.json' with { type: 'json' };
 
 const { gray, green, blue, red, yellow } = ansiColors;
 
@@ -372,18 +372,18 @@ function parseVersion(versionString: string) {
 
 async function applyVersion(version: Version) {
     packageJson.version = version.raw;
-    await writeFile(join(__dirname, '..', 'package.json'), JSON.stringify(packageJson, null, 4));
+    await writeFile(join(__dirname, '..', 'package.json'), JSON.stringify(packageJson, null, 4) + '\n');
     
     for (const item of await readdir(packagesFolder, { withFileTypes: true })) {
         if (!item.isDirectory()) continue;
         
         const packagePath = join(packagesFolder, item.name);
         
-        const subPackageJson = (await import('file://' + join(packagePath, 'package.json'), { assert: { type: 'json' } })).default;
+        const subPackageJson = (await import('file://' + join(packagePath, 'package.json'), { with: { type: 'json' } })).default;
         
         subPackageJson.version = version.toString();
         
-        await writeFile(join(packagePath, 'package.json'), JSON.stringify(subPackageJson, null, 4));
+        await writeFile(join(packagePath, 'package.json'), JSON.stringify(subPackageJson, null, 4) + '\n');
     }
     
     // TODO: tag in git and push that up
