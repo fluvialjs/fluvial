@@ -183,7 +183,7 @@ export class FluvialResponse extends Writable {
     #eventSourceId: string;
     
     _write(data: string | Buffer, encoding: BufferEncoding = 'utf-8') {
-        return this.rawResponse.write(data, encoding);
+        return this.rawResponse.write(data as string | Uint8Array, encoding);
     }
     
     end(data?: string | Buffer | (() => void)) {
@@ -196,7 +196,7 @@ export class FluvialResponse extends Writable {
         }
         
         if (data && typeof data != 'function') {
-            this.rawResponse.end(data);
+            this.rawResponse.end(data as string | Uint8Array);
         }
         else {
             this.rawResponse.end();
@@ -305,12 +305,6 @@ export class FluvialResponse extends Writable {
     
     async #send(data?: string | Buffer) {
         const bytes = Buffer.isBuffer(data) ? data : typeof data == 'string' ? Buffer.from(data) : Buffer.from([]);
-        
-        for (const type of this.rawResponse.eventNames()) {
-            this.rawResponse.on(type, (...args) => {
-                console.log(type, args)
-            });
-        }
         
         if (bytes.byteLength) {
             this.headers['content-length'] = String(bytes.byteLength);
