@@ -1,43 +1,43 @@
 {
-    "name": "@fluvial/csp",
-    "version": "0.5.0",
-    "main": "dist/index.js",
-    "files": [
-        "dist/**/*",
-        "README.md"
-    ],
-    "scripts": {
-        "ex": "pnpm tsx",
-        "compile": "tsc --project tsconfig.src.json",
-        "test": "pnpm ex --tsconfig=tsconfig.test.json --test src/**/*.test.ts",
-        "test:coverage": "pnpm ex --tsconfig=tsconfig.test.json --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
-        "prepublish": "pnpm test && pnpm compile"
-    },
-    "description": "A fluvial-compatible Content Security Policy middleware",
-    "keywords": [
-        "fluvial",
-        "http/2",
-        "http2",
-        "security",
-        "csp"
-    ],
-    "type": "module",
-    "author": {
-        "name": "Samuel Skeen",
-        "email": "sskeen9@gmail.com",
-        "url": "https://github.com/cwadrupldijjit"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/fluvialjs/fluvial.git",
-        "directory": "packages/csp"
-    },
-    "license": "GPL-3.0-only",
-    "devDependencies": {
-        "@types/node": "catalog:",
-        "typescript": "catalog:"
-    },
-    "peerDependencies": {
-        "fluvial": ">=0.4.0"
-    }
+	"name": "@fluvial/csp",
+	"version": "0.5.0",
+	"main": "dist/index.js",
+	"files": [
+		"dist/**/*",
+		"README.md"
+	],
+	"scripts": {
+		"ex": "pnpm tsx",
+		"compile": "tsc --project tsconfig.src.json",
+		"test": "pnpm ex --tsconfig=tsconfig.test.json --test src/**/*.test.ts",
+		"test:coverage": "pnpm ex --tsconfig=tsconfig.test.json --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
+		"prepublish": "pnpm test && pnpm compile"
+	},
+	"description": "A fluvial-compatible Content Security Policy middleware",
+	"keywords": [
+		"fluvial",
+		"http/2",
+		"http2",
+		"security",
+		"csp"
+	],
+	"type": "module",
+	"author": {
+		"name": "Samuel Skeen",
+		"email": "sskeen9@gmail.com",
+		"url": "https://github.com/cwadrupldijjit"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/fluvialjs/fluvial.git",
+		"directory": "packages/csp"
+	},
+	"license": "GPL-3.0-only",
+	"devDependencies": {
+		"@types/node": "catalog:",
+		"typescript": "catalog:"
+	},
+	"peerDependencies": {
+		"fluvial": ">=0.4.0"
+	}
 }

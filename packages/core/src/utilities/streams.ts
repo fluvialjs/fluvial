@@ -6,15 +6,15 @@ import type { Stream } from "node:stream";
  * or is in the "cleanup" stage.
  */
 export function streamFinished(sourceStream: Stream) {
-    return new Promise<void>((resolve, reject) => {
-        if ('finished' in sourceStream && sourceStream.finished) {
-            resolve();
-        }
-        
-        sourceStream.on('close', resolve);
-        sourceStream.on('finish', resolve);
-        sourceStream.on('end', resolve);
-        
-        sourceStream.on('error', reject);
-    });
+	return new Promise<void>((resolve, reject) => {
+		if ('finished' in sourceStream && sourceStream.finished) {
+			resolve();
+		}
+		
+		sourceStream.on('close', resolve);
+		sourceStream.on('finish', resolve);
+		sourceStream.on('end', resolve);
+		
+		sourceStream.on('error', reject);
+	});
 }

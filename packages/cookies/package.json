@@ -1,7 +1,7 @@
 {
-	"name": "fluvial",
+	"name": "@fluvial/cookies",
 	"version": "0.5.0",
-	"description": "Fluvial:  A light http/2 server framework, similar to Express",
+	"description": "A cookie management library for Fluvial",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"files": [
@@ -23,7 +23,8 @@
 		"stream",
 		"server",
 		"back-end",
-		"backend"
+		"backend",
+		"cookies"
 	],
 	"author": {
 		"email": "sskeen9@gmail.com",
@@ -33,16 +34,13 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/fluvialjs/fluvial.git",
-		"directory": "packages/core"
+		"directory": "packages/cookies"
 	},
-	"license": "GPL-3.0-only",
 	"devDependencies": {
 		"@types/node": "catalog:",
-		"pnpm": "catalog:",
-		"tsx": "catalog:",
 		"typescript": "catalog:"
 	},
-	"dependencies": {
-		"mime": "^4.0.4"
+	"peerDependencies": {
+		"fluvial": ">=0.5.0"
 	}
 }

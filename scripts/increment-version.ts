@@ -96,7 +96,7 @@ if (nextIsArgValue) {
 
 if (options.help) {
     console.log(`
-Usage:  node --loader ts-node/esm -r ts-node/register scripts/increment-version.ts <options>
+Usage:  tsx scripts/increment-version.ts <options>
 
 Currently-supported options are:
   --major, -M       increment the first version number (e.g.: 1.0.0 -> 2.0.0)

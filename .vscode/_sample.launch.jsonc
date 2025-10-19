@@ -1,3 +1,14 @@
+/*******
+The following file is a sample launch.json for those who use VS Code or to give an idea
+how they can run things like tests or scripts as needed.  All you need to do to use this
+file personally is to copy the contents of this file into a `launch.json` as a sibling
+to this file. (e.g., `cat _sample.launch.jsonc > launch.json`).
+
+The `launch.json` is ignored so that any configurations and changes made in that file
+will not be tracked, which as somebody who works on this project, it is needful not to
+have a "version" of this package just because somebody changed which package was being
+tested even if no package changes were made.
+*/
 {
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
@@ -11,27 +22,71 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
             "runtimeArgs": [
-                "--import",
-                "file://${workspaceFolder}/register-ts-esm.js",
+                "--project",
+                ////------ uncomment whichever project's tests you wish to run
+                // "${workspaceFolder}/packages/cookies/tsconfig.test.json",
+                // "${workspaceFolder}/packages/core/tsconfig.test.json",
+                // "${workspaceFolder}/packages/cors/tsconfig.test.json",
+                // "${workspaceFolder}/packages/csp/tsconfig.test.json",
+                "${workspaceFolder}/packages/express-adapter/tsconfig.test.json",
                 "--test",
-                "--watch"
+                "--watch",
             ],
             "args": [
                 "**/*.test.ts"
                 // "--coverage",
             ],
-            "env": {
-                "TS_NODE_PROJECT": "${workspaceFolder}/packages/core/tsconfig.test.json"
-            },
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ],
             "console": "integratedTerminal",
+            ////------ uncomment whichever project's tests you wish to run
+            // "cwd": "${workspaceFolder}/packages/cookies",
             // "cwd": "${workspaceFolder}/packages/core",
             // "cwd": "${workspaceFolder}/packages/cors",
             // "cwd": "${workspaceFolder}/packages/csp",
-            "cwd": "${workspaceFolder}/packages/express-adapter"
-        }
+            "cwd": "${workspaceFolder}/packages/express-adapter",
+        },
+        {
+            "type": "node",
+            "name": "Launch clean",
+            "request": "launch",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
+            "runtimeArgs": [
+                "--project",
+                "${workspaceFolder}/tsconfig.json",
+            ],
+            "program": "${workspaceFolder}/scripts/clean.ts",
+            "skipFiles": [
+                "<node_internals>/**",
+            ],
+            "outFiles": [
+                "${workspaceFolder}/**/*.(m|c|)js",
+                "!**/node_modules/**",
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/scripts",
+        },
+        {
+            "type": "node",
+            "name": "Launch compile",
+            "request": "launch",
+            "runtimeArgs": [
+                "--project",
+                "${workspaceFolder}/tsconfig.json",
+            ],
+            "program": "${workspaceFolder}/scripts/compile.ts",
+            "skipFiles": [
+                "<node_internals>/**",
+            ],
+            "outFiles": [
+                "${workspaceFolder}/**/*.(m|c|)js",
+                "!**/node_modules/**",
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/scripts",
+        },
     ]
 }
