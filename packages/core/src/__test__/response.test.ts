@@ -1,10 +1,10 @@
 import { describe, test } from 'node:test';
 import { equal, match } from 'node:assert';
+import { Readable } from 'node:stream';
 import { FluvialResponse } from '../response.js';
 import { createHttp1Response, createHttp2Response } from './utilities/mock-responses.js';
 import { createHttp2Request } from './utilities/mock-requests.js';
 import { FluvialRequest } from '../request.js';
-
 
 describe('fluvial response basics', () => {
 	test('when given a raw http/2 response, it builds correctly', () => {
@@ -167,5 +167,79 @@ describe('sending fluvial responses', () => {
 		
 		equal(chunks.includes(payload), true);
 		equal(rawPayload.includes(200..toString()), true);
+	});
+});
+
+describe('response.beforeSend', () => {
+	test('adding a `beforeSend` hook to a response should run before the response sends', async () => {
+		let hookCalled = false;
+		let dataSentBeforeHook = false;
+		const res = new FluvialResponse(createHttp2Response(() => {
+			if (!hookCalled) {
+				dataSentBeforeHook = true;
+			}
+		}));
+		Object.defineProperty(res, 'request', {
+			value: new FluvialRequest(createHttp2Request('/', 'GET')),
+		});
+		
+		res.beforeSend(() => {
+			hookCalled = true;
+		});
+		
+		await res.send('foo');
+		equal(dataSentBeforeHook, false);
+		equal(hookCalled, true);
+	});
+	
+	test('when provided with an asynchronous `beforeSend` hook, it should resolve prior to sending', async () => {
+		let hookCalled = false;
+		let dataSentBeforeHook = false;
+		const res = new FluvialResponse(createHttp2Response(() => {
+			if (!hookCalled) {
+				dataSentBeforeHook = true;
+			}
+		}));
+		Object.defineProperty(res, 'request', {
+			value: new FluvialRequest(createHttp2Request('/', 'GET')),
+		});
+		res.beforeSend(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			hookCalled = true;
+		});
+		await res.send('foo');
+		equal(dataSentBeforeHook, false);
+		equal(hookCalled, true);
+	});
+	
+	test('the `beforeSend` should be called even in the event of a `response.stream` call', async () => {
+		let hookCalled = false;
+		const res = new FluvialResponse(createHttp2Response());
+		Object.defineProperty(res, 'request', {
+			value: new FluvialRequest(createHttp2Request('/', 'GET')),
+		});
+		res.beforeSend(() => {
+			hookCalled = true;
+		});
+		const innerStream = new Readable({
+			read() {
+				this.push('foo');
+				this.push(null);
+			}
+		});
+		await res.stream(innerStream);
+		equal(hookCalled, true);
+	});
+});
+
+describe('response.redirect', () => {
+	test('redirecting should set the location header and status code', async () => {
+		const res = new FluvialResponse(createHttp2Response());
+		Object.defineProperty(res, 'request', {
+			value: new FluvialRequest(createHttp2Request('/', 'GET')),
+		});
+		await res.redirect('https://example.com', 301);
+		equal(res.headers['location'], 'https://example.com');
+		equal(res.status(), 301);
 	});
 });

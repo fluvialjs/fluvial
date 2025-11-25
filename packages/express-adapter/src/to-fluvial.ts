@@ -44,7 +44,7 @@ function wrapForFluvial(
 	};
 	return {
 		req: new Proxy(req, {
-			get(target, property, receiver) {
+			get(target, property) {
 				if (property == 'body') {
 					return target.payload || {};
 				}
@@ -60,15 +60,15 @@ function wrapForFluvial(
 					// the intent is not to continue the request
 					if (property == 'end' || property == 'send' || property == 'json') {
 						return proxiedMethods.req[property] = new Proxy(target[property], {
-							get(fnTarget, prop, receiver) {
+							get(fnTarget, prop) {
 								return fnTarget[prop];
 							},
-							set(fnTarget, prop, val, receiver) {
+							set(fnTarget, prop, val) {
 								fnTarget[prop] = val;
 								
 								return true;
 							},
-							apply(fnTarget, thisArg, argArray) {
+							apply(fnTarget, _, argArray) {
 								resolve();
 								return fnTarget.apply(target, argArray);
 							},
@@ -87,24 +87,6 @@ function wrapForFluvial(
 						return proxiedMethods.rawRequest[property];
 					}
 					
-					// the intent is not to continue the request
-					if (property == 'end' || property == 'send' || property == 'json') {
-						return proxiedMethods.rawRequest[property] = new Proxy(target[property], {
-							get(fnTarget, prop, receiver) {
-								return fnTarget[prop];
-							},
-							set(fnTarget, prop, val, receiver) {
-								fnTarget[prop] = val;
-								
-								return true;
-							},
-							apply(fnTarget, thisArg, argArray) {
-								resolve();
-								return fnTarget.apply(target, argArray);
-							},
-						});
-					}
-					
 					if (typeof target.rawRequest[property] == 'function') {
 						return target.rawRequest[property].bind(target.rawRequest);
 					}
@@ -112,9 +94,14 @@ function wrapForFluvial(
 					return target.rawRequest[property];
 				}
 			},
-			set(target, property, value, receiver) {
+			set(target, property, value) {
 				if (property == 'body') {
-					target.payload = value;
+					Reflect.defineProperty(target, 'payload', {
+						value,
+						writable: true,
+						enumerable: true,
+						configurable: false,
+					});
 				}
 				
 				target[property] = value;
@@ -133,7 +120,7 @@ function wrapForFluvial(
 			},
 		}),
 		res: new Proxy<ExpressResponse & FluvialResponse>(res as FluvialResponse & ExpressResponse, {
-			get(target, property, receiver) {
+			get(target, property) {
 				if (property in target) {
 					if (property in proxiedMethods.res) {
 						return proxiedMethods.res[property];
@@ -141,16 +128,20 @@ function wrapForFluvial(
 					
 					// the intent is not to continue the request
 					if (property == 'end' || property == 'send' || property == 'json') {
+						if (property in proxiedMethods.res) {
+							return proxiedMethods.res[property];
+						}
+						
 						return proxiedMethods.res[property] = new Proxy(target[property], {
-							get(fnTarget, prop, receiver) {
+							get(fnTarget, prop) {
 								return fnTarget[prop];
 							},
-							set(fnTarget, prop, val, receiver) {
+							set(fnTarget, prop, val) {
 								fnTarget[prop] = val;
 								
 								return true;
 							},
-							apply(fnTarget, thisArg, argArray) {
+							apply(fnTarget, _, argArray) {
 								resolve();
 								return fnTarget.apply(target, argArray);
 							},
@@ -172,15 +163,15 @@ function wrapForFluvial(
 					// the intent is not to continue the request
 					if (property == 'end' || property == 'send' || property == 'json') {
 						return proxiedMethods.rawResponse[property] = new Proxy(target.rawResponse[property], {
-							get(fnTarget, prop, receiver) {
+							get(fnTarget, prop) {
 								return fnTarget[prop];
 							},
-							set(fnTarget, prop, val, receiver) {
+							set(fnTarget, prop, val) {
 								fnTarget[prop] = val;
 								
 								return true;
 							},
-							apply(fnTarget, thisArg, argArray) {
+							apply(fnTarget, _, argArray) {
 								resolve();
 								return fnTarget.apply(target, argArray);
 							},
@@ -196,7 +187,7 @@ function wrapForFluvial(
 				
 				console.log('Response:', property);
 			},
-			set(target, property, value, receiver) {
+			set(target, property, value) {
 				target[property] = value;
 				target.rawResponse[property] = value;
 				

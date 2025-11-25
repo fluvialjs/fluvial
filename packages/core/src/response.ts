@@ -35,12 +35,16 @@ declare global {
 			json(data: object): Promise<this>;
 			
 			/** EVENT STREAM MODE ONLY: when the response is set as an event stream, this sends the event; errors otherwise */
-			sendEvent(data?: object | string): this;
+			sendEvent(data?: object | string): Promise<this>;
 			
 			/** ideal for needing to respond with files */
-			stream(stream: Readable): this;
+			stream(stream: Readable): Promise<this>;
 			// TODO: XML format
 			// TODO: urlencoded format (like forms)
+			redirect(url: string, statusCode?: number): Promise<this>;
+			
+			/** used to run something on the response prior to sending the response; meant to be used in the context of middleware */
+			beforeSend(callback: (response: this) => void | Promise<void>): this;
 		}
 
 		interface __InternalResponse extends Fluvial.BaseResponse {
@@ -60,6 +64,8 @@ declare global {
 }
 
 export class FluvialResponse extends Writable {
+	#beforeSendCallbacks: Array<(response: this) => void | Promise<void>> = [];
+	
 	get httpVersion() {
 		return this.request.httpVersion;
 	}
@@ -232,7 +238,7 @@ export class FluvialResponse extends Writable {
 		return this.#send(data as string);
 	}
 	
-	sendEvent(event: string | object) {
+	async sendEvent(event: string | object) {
 		if (!this.#eventSource) {
 			throw TypeError('An attempt to send an event failed because this response is not set up to be an event source; must use the asEventSource() setter first');
 		}
@@ -242,8 +248,12 @@ export class FluvialResponse extends Writable {
 		}
 		
 		if (!this.rawResponse.headersSent) {
+			for (const callback of this.#beforeSendCallbacks) {
+				await callback(this);
+			}
+			
 			if (this.httpVersion == '1.1') {
-				this.rawResponse.writeHead(this.#status, {
+				(this.rawResponse as ServerResponse).writeHead(this.#status, {
 					...this.headers
 				});
 			}
@@ -283,9 +293,14 @@ export class FluvialResponse extends Writable {
 		return this.#send(stringifiedData);
 	}
 	
-	stream(sourceStream: Readable) {
+	async stream(sourceStream: Readable) {
 		if (this.responseSent) {
 			throw TypeError('attempted to send another response though the response stream is closed');
+		}
+		
+		// TODO: Possibly reverse the order of the callbacks if that is the expected convention
+		for (const callback of this.#beforeSendCallbacks) {
+			await callback(this);
 		}
 		
 		if (this.httpVersion == '1.1') {
@@ -303,11 +318,27 @@ export class FluvialResponse extends Writable {
 		return this;
 	}
 	
+	redirect(url: string, statusCode = 302) {
+		this.headers.location = url;
+		this.status(statusCode);
+		return this.#send();
+	}
+	
+	beforeSend(callback: (response: this) => void | Promise<void>): this {
+		this.#beforeSendCallbacks.push(callback);
+		return this;
+	}
+	
 	async #send(data?: string | Buffer) {
 		const bytes = Buffer.isBuffer(data) ? data : typeof data == 'string' ? Buffer.from(data) : Buffer.from([]);
 		
 		if (bytes.byteLength) {
 			this.headers['content-length'] = String(bytes.byteLength);
+		}
+		
+		// TODO: Possibly reverse the order of the callbacks if that is the expected convention
+		for (const callback of this.#beforeSendCallbacks) {
+			await callback(this);
 		}
 		
 		if (this.httpVersion == '1.1') {

@@ -1,6 +1,6 @@
 {
 	"name": "fluvial",
-	"version": "0.5.0",
+	"version": "0.6.0",
 	"description": "Fluvial:  A light http/2 server framework, similar to Express",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -14,6 +14,7 @@
 		"compile": "tsc --project tsconfig.src.json",
 		"test": "pnpm test:base src/**/*.test.ts",
 		"test:base": "pnpm ex --tsconfig=tsconfig.test.json --test",
+		"test:e2e": "pnpm test:base src/**/*.e2e.ts",
 		"test:coverage": "pnpm test:base --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
 		"prepublish": "pnpm test && pnpm compile"
 	},
@@ -37,12 +38,14 @@
 	},
 	"license": "GPL-3.0-only",
 	"devDependencies": {
+		"@playwright/test": "catalog:",
 		"@types/node": "catalog:",
+		"playwright": "catalog:",
 		"pnpm": "catalog:",
 		"tsx": "catalog:",
 		"typescript": "catalog:"
 	},
 	"dependencies": {
-		"mime": "^4.0.4"
+		"mime": "^4.1.0"
 	}
 }

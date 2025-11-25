@@ -143,6 +143,15 @@ const applicationPrototype = Object.create(
 				};
 			},
 		},
+		close: {
+			get() {
+				return function close(this: __InternalApplication) {
+					if (this.server.listening) {
+						this.server.close();
+					}
+				};
+			},
+		},
 	},
 );
 
@@ -185,7 +194,10 @@ export interface __InternalApplication extends Application, __InternalRouter {
 /** Similar to Express.Application */
 export interface Application extends Router {
 	(req: Http2ServerRequest, res: Http2ServerResponse): Promise<void>;
+	/** This begins listening for connections on the specified port */
 	listen(port: number, callback?: () => void): void;
+	/** This is a hook that generally is only called for tests */
+	close(): void;
 }
 
 export {
