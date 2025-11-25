@@ -1,19 +1,21 @@
 {
-    "extends": "./tsconfig.json",
-    "compilerOptions": {
-        "types": [
-            "node"
-        ],
-        "composite": true
-    },
-    "include": [
-        "**/*.test.ts",
-        "**/__test__/**/*.ts"
-    ],
-    "exclude": [
-        "node_modules"
-    ],
-    "references": [
-        { "path": "./tsconfig.src.json" }
-    ]
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"types": [
+			"node"
+		],
+		"composite": true
+	},
+	"include": [
+		"playwright.config.ts",
+		"**/*.e2e.ts",
+		"**/*.test.ts",
+		"**/__test__/**/*.ts"
+	],
+	"exclude": [
+		"node_modules"
+	],
+	"references": [
+		{ "path": "./tsconfig.src.json" }
+	]
 }

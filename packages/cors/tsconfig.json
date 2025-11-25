@@ -1,10 +1,10 @@
 {
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-        "noEmit": false
-    },
-    "references": [
-        { "path": "./tsconfig.src.json" },
-        { "path": "./tsconfig.test.json" }
-    ]
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false
+	},
+	"references": [
+		{ "path": "./tsconfig.src.json" },
+		{ "path": "./tsconfig.test.json" }
+	]
 }

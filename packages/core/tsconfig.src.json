@@ -1,17 +1,21 @@
 {
-    "extends": "./tsconfig.json",
-    "compilerOptions": {
-        "rootDir": "src",
-        "outDir": "dist",
-        "composite": true
-    },
-    "include": [
-        "**/*.ts"
-    ],
-    "exclude": [
-        "node_modules",
-        "dist",
-        "**/__test__",
-        "**/*.test.ts"
-    ]
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "dist",
+		"composite": true,
+		"declaration": true,
+		"declarationDir": "dist"
+	},
+	"include": [
+		"**/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"playwright.config.ts",
+		"**/__test__",
+		"**/*.e2e.ts",
+		"**/*.test.ts"
+	]
 }

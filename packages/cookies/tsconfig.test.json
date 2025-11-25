@@ -1,0 +1,19 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"types": [
+			"node"
+		],
+		"composite": true
+	},
+	"include": [
+		"**/*.test.ts",
+		"**/__test__/**/*.ts"
+	],
+	"exclude": [
+		"node_modules"
+	],
+	"references": [
+		{ "path": "./tsconfig.src.json" }
+	]
+}

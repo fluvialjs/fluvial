@@ -1,22 +1,22 @@
 {
-    "extends": "./tsconfig.json",
-    "compilerOptions": {
-        "types": [
-            "node"
-        ],
-        "rootDir": "src",
-        "strict": false,
-        "strictNullChecks": false,
-        "composite": true
-    },
-    "include": [
-        "**/*.test.ts",
-        "**/__test__/**/*.ts"
-    ],
-    "exclude": [
-        "node_modules"
-    ],
-    "references": [
-        { "path": "./tsconfig.src.json" }
-    ]
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"types": [
+			"node"
+		],
+		"rootDir": "src",
+		"strict": false,
+		"strictNullChecks": false,
+		"composite": true
+	},
+	"include": [
+		"**/*.test.ts",
+		"**/__test__/**/*.ts"
+	],
+	"exclude": [
+		"node_modules"
+	],
+	"references": [
+		{ "path": "./tsconfig.src.json" }
+	]
 }

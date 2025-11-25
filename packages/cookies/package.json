@@ -1,0 +1,50 @@
+{
+	"name": "@fluvial/cookies",
+	"version": "0.6.0",
+	"description": "A cookie management library for Fluvial",
+	"exports": {
+		".": "./dist/index.js",
+		"./cookie-collection": "./dist/cookie-collection.js"
+	},
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist/**/*",
+		"README.md"
+	],
+	"type": "module",
+	"scripts": {
+		"ex": "tsx",
+		"compile": "tsc --project tsconfig.src.json",
+		"test": "pnpm test:base src/**/*.test.ts",
+		"test:base": "pnpm ex --tsconfig=tsconfig.test.json --test",
+		"test:coverage": "pnpm test:base --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=dist/lcov.info --test-reporter=tap --test-reporter-destination=dist/tap.info src/**/*.test.ts",
+		"prepublish": "pnpm test && pnpm compile"
+	},
+	"keywords": [
+		"http/2",
+		"http2",
+		"stream",
+		"server",
+		"back-end",
+		"backend",
+		"cookies"
+	],
+	"author": {
+		"email": "sskeen9@gmail.com",
+		"name": "Samuel Skeen",
+		"url": "https://github.com/cwadrupldijjit"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/fluvialjs/fluvial.git",
+		"directory": "packages/cookies"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"fluvial": "link:../core"
+	},
+	"peerDependencies": {
+		"fluvial": ">=0.5.0"
+	}
+}

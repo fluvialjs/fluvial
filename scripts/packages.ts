@@ -8,27 +8,27 @@ import { join } from 'node:path';
  * (since it uses the other packages to be sure they can be ported)
  */
 export async function getPackages() {
-    const packageDirs = (await readdir(join(import.meta.dirname, '..', 'packages'), { withFileTypes: true }))
-    .filter((pkg) => pkg.isDirectory());
-
-    return (await Promise.all(packageDirs.map<Promise<[ Dirent, PackageJson ]>>(async (pkg) => [ pkg, JSON.parse(await readFile(join(pkg.parentPath, pkg.name, 'package.json'), 'utf-8')) ])))
-        .sort(([ , a ], [ , b ]) => {
-            if (a.name in b.devDependencies || a.name in (b.peerDependencies ?? {})) {
-                return -1;
-            }
-            
-            if (b.name in a.devDependencies || b.name in (a.peerDependencies ?? {})) {
-                return 1;
-            }
-            
-            return 0;
-        })
-        .map(([ pkg ]) => pkg);
+	const packageDirs = (await readdir(join(import.meta.dirname, '..', 'packages'), { withFileTypes: true }))
+		.filter((pkg) => pkg.isDirectory());
+	
+	return (await Promise.all(packageDirs.map<Promise<[ Dirent, PackageJson ]>>(async (pkg) => [ pkg, JSON.parse(await readFile(join(pkg.parentPath, pkg.name, 'package.json'), 'utf-8')) ])))
+		.sort(([ , a ], [ , b ]) => {
+			if (a.name in b.devDependencies || a.name in (b.peerDependencies ?? {})) {
+				return -1;
+			}
+			
+			if (b.name in a.devDependencies || b.name in (a.peerDependencies ?? {})) {
+				return 1;
+			}
+			
+			return 0;
+		})
+		.map(([ pkg ]) => pkg);
 }
 
 export interface PackageJson {
-    name: string;
-    dependencies: Record<string, string>;
-    devDependencies: Record<string, string>;
-    peerDependencies?: Record<string, string>;
+	name: string;
+	dependencies: Record<string, string>;
+	devDependencies: Record<string, string>;
+	peerDependencies?: Record<string, string>;
 }
