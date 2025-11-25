@@ -334,12 +334,6 @@ export class FluvialResponse extends Writable implements Fluvial.__InternalRespo
 	}
 	
 	async #send(data?: string | Buffer) {
-		const bytes = Buffer.isBuffer(data) ? data : typeof data == 'string' ? Buffer.from(data) : Buffer.from([]);
-		
-		if (bytes.byteLength) {
-			this.headers['content-length'] = String(bytes.byteLength);
-		}
-		
 		const sendContext: ResponseSendContext = {
 			data,
 			res: this,
@@ -347,6 +341,12 @@ export class FluvialResponse extends Writable implements Fluvial.__InternalRespo
 		// TODO: Possibly reverse the order of the callbacks if that is the expected convention
 		for (const callback of this.#beforeSendCallbacks) {
 			await callback(sendContext);
+		}
+		
+		const bytes = Buffer.isBuffer(sendContext.data) ? sendContext.data : typeof data == 'string' ? Buffer.from(sendContext.data) : Buffer.from([]);
+		
+		if (bytes.byteLength && !this.headers['content-length']) {
+			this.headers['content-length'] = String(bytes.byteLength);
 		}
 		
 		if (this.httpVersion == '1.1') {
