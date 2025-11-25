@@ -44,7 +44,7 @@ declare global {
 			redirect(url: string, statusCode?: number): Promise<this>;
 			
 			/** used to run something on the response prior to sending the response; meant to be used in the context of middleware */
-			beforeSend(callback: (response: this) => void | Promise<void>): this;
+			beforeSend(callback: (response: ResponseSendContext) => void | Promise<void>): this;
 		}
 
 		interface __InternalResponse extends Fluvial.BaseResponse {
@@ -63,7 +63,7 @@ declare global {
 	}
 }
 
-export class FluvialResponse extends Writable {
+export class FluvialResponse extends Writable implements Fluvial.__InternalResponse {
 	#beforeSendCallbacks: Array<(response: ResponseSendContext) => void | Promise<void>> = [];
 	
 	get httpVersion() {
