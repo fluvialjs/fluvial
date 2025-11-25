@@ -13,7 +13,9 @@
 	"exclude": [
 		"node_modules",
 		"dist",
+		"playwright.config.ts",
 		"**/__test__",
+		"**/*.e2e.ts",
 		"**/*.test.ts"
 	]
 }

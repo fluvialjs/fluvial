@@ -1,8 +1,11 @@
 {
 	"name": "@fluvial/cookies",
-	"version": "0.5.0",
+	"version": "0.6.0",
 	"description": "A cookie management library for Fluvial",
-	"main": "dist/index.js",
+	"exports": {
+		".": "./dist/index.js",
+		"./cookie-collection": "./dist/cookie-collection.js"
+	},
 	"types": "dist/index.d.ts",
 	"files": [
 		"dist/**/*",
@@ -38,7 +41,8 @@
 	},
 	"devDependencies": {
 		"@types/node": "catalog:",
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"fluvial": "link:../core"
 	},
 	"peerDependencies": {
 		"fluvial": ">=0.5.0"

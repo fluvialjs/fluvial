@@ -37,6 +37,9 @@ export interface Cookie {
 	path?: string;
 	/** Whether the cookie should be partitioned or not; for further understanding search for "partitioned cookie" or "CHIPS" */
 	partitioned?: boolean;
+	
+	/** This, when specifying `'set-cookie'`, will give the value that should be provided to the `Set-Cookie` header; `key-value` only gives the first segment, which contains what the string says */
+	toString(type?: 'set-cookie' | 'key-value'): string;
 }
 
 declare global {

@@ -7,18 +7,28 @@ import {
 import type { Request } from './request.js';
 import type { Response } from './response.js';
 
+// the following two are there to ensure that the correct types are used
+// in the global.Fluvial namespace, as it had been using the
+// `Fluvial.Re.....` versions instead of the imported ones; this caused
+// issues downstream because the `Fluvial.Re....` types aren't complete,
+// and as such attempting to type the parameters of route handlers
+// resulted in type errors; this should ensure that the correct types
+// apply where they are used
+type FluvialRequest = Request;
+type FluvialResponse = Response;
+
 declare global {
 	namespace Fluvial {
 		/** @protected exported type; should not be imported outside of this package */
 		interface __InternalRouter extends Router {
-			handleRequest(remainingPath: PathString, matchedPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
+			handleRequest(remainingPath: PathString, matchedPath: string, req: FluvialRequest, res: FluvialResponse, err?: unknown): Promise<void | 'next'>;
 			__getMatchingRoute(state: __RouterState): Generator<__InternalRoute>;
 			routes: __InternalRoute[];
 			__addRoute(method: HandlerHttpMethods | null, path: PathMatcher, ...handlers: (RequestHandler | ErrorHandler | Router)[]): __InternalRoute;
 		}
 		
 		interface Router {
-			(remainingPath: PathString, matchedPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
+			(remainingPath: PathString, matchedPath: string, req: FluvialRequest, res: FluvialResponse, err?: unknown): Promise<void | 'next'>;
 			component: 'router';
 			get(path: PathMatcher, ...handlers: RequestHandler[]): this;
 			post(path: PathMatcher, ...handlers: RequestHandler[]): this;
@@ -37,7 +47,7 @@ declare global {
 		
 		/** @protected exported type; should not be imported outside of this package */
 		interface __InternalRoute extends Route {
-			handleRequest(remainingPath: string, matchedPath: string, req: Request, res: Response, err?: unknown): Promise<void | 'next'>;
+			handleRequest(remainingPath: string, matchedPath: string, req: FluvialRequest, res: FluvialResponse, err?: unknown): Promise<void | 'next'>;
 			__getMatchingHandlers(this: __InternalRoute, state: __RouteHandlerState): Generator<(RequestHandler | ErrorHandler | __InternalRouter)[]>;
 			handlers: [ method: HandlerHttpMethods, ...handlers: (RequestHandler | ErrorHandler | Router)[] ][];
 			__addHandler(this: __InternalRoute, method: HandlerHttpMethods | null, ...handlers: (RequestHandler | ErrorHandler | Router)[]): this;
@@ -50,13 +60,13 @@ declare global {
 			error?: unknown;
 			matchedPath?: PathString;
 			path: PathString;
-			req: Request;
+			req: FluvialRequest;
 			end?: boolean;
 		}
 		
 		interface __RouteHandlerState {
 			error?: unknown;
-			req: Request;
+			req: FluvialRequest;
 			path: string;
 			matchedPath?: string;
 			end?: boolean;
@@ -79,14 +89,14 @@ declare global {
 		 * A regular route handler or middleware function
 		 */
 		interface RequestHandler {
-			(req: Request, res: Response): void | 'next' | 'route' | Promise<void | 'next' | 'route'>;
+			(req: FluvialRequest, res: FluvialResponse): void | 'next' | 'route' | Promise<void | 'next' | 'route'>;
 		}
 		
 		/**
 		 * An error route handler or middleware function.  Three parameters are required; any less and it's considered a regular route handler
 		 */
 		interface ErrorHandler<ErrorType = unknown> {
-			(err: ErrorType, req: Request, res: Response): void | 'next' | Promise<void | 'next'>;
+			(err: ErrorType, req: FluvialRequest, res: FluvialResponse): void | 'next' | Promise<void | 'next'>;
 		}
 	}
 }

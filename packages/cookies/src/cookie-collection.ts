@@ -5,7 +5,7 @@ import { parse } from './parse.js';
  * Creates an empty CookieCollection
  */
 export function create() {
-	return Object.create(CookieCollectionProto) as CookieCollection;
+	return new CookieCollection() as CookieCollection;
 }
 
 /**
@@ -38,6 +38,8 @@ export function fromEntries(entries: ([name: string, value: SupportedCookieInit]
 		}
 		else if (typeof entry == 'object' && 'name' in entry && 'value' in entry) {
 			cookieObj = entry;
+			
+			ensureCookieStringifies(cookieObj);
 		}
 		
 		if (!cookieObj) {
@@ -50,6 +52,118 @@ export function fromEntries(entries: ([name: string, value: SupportedCookieInit]
 	}
 	
 	return cookies;
+}
+
+export class CookieCollection {
+	#onChangeHooks: (() => void)[] = [];
+	#cookies: { [key: string]: Cookie } = {};
+	
+	/** The current length of the collection */
+	get length() {
+		return Object.keys(this.#cookies).length;
+	}
+	
+	/** Returns a true if the collection contains the cookie with the given name */
+	has(name: string) {
+		return Boolean(this.#cookies[name]);
+	}
+	
+	/** Adds a cookie-like object to the collection */
+	add(cookie: Cookie): void;
+	/** Adds a cookie with a given name and the provided value (string, number, or boolean) */
+	add(name: string, value: SupportedCookieValues): void;
+	add(cookie: Cookie | string, value?: SupportedCookieValues) {
+		if (typeof cookie == 'string') {
+			cookie = {
+				name: cookie,
+				value,
+			};
+		}
+		if (!cookie || typeof cookie != 'object' || !cookie.name || !cookie.value) {
+			// TODO: replace this with something better
+			console.log(`Invalid cookie entry:`, cookie);
+			return;
+		}
+		
+		ensureCookieStringifies(cookie);
+		
+		this.#cookies[cookie.name] = cookie;
+		
+		for (const hook of this.#onChangeHooks) {
+			hook();
+		}
+	}
+	
+	/** Returns in a cookie if one is found with the provided name; otherwise, undefined */
+	get(name: string) {
+		return this.#cookies[name];
+	}
+	
+	/** Deletes a cookie with the given name if it exists; if none is found, it does nothing */
+	remove(name: string) {
+		const found = name in this.#cookies
+		
+		delete this.#cookies[name];
+		
+		if  (found) {
+			for (const hook of this.#onChangeHooks) {
+				hook();
+			}
+		}
+	}
+	
+	/** This registers a hook for when a cookie is set or removed.  It was added since the Express adaptation requires the cookie headers set each time there is a mutation or else it won't work */
+	onChange(this: CookieCollection, hook: () => void) {
+		this.#onChangeHooks.push(hook);
+	}
+	
+	/** Returns the generic object-stringified string or, if specified, a string representative of the collection */
+	toString(this: CookieCollection, as?: 'cookie-header' | 'set-cookie') {
+		if (!as || ![ 'cookie-header', 'set-cookie' ].includes(as)) {
+			return `[object ${CookieCollection.name}]`;
+		}
+		
+		let result = '';
+		
+		for (const cookie of Object.values(this.#cookies)) {
+			if (as == 'cookie-header') {
+				if (result) {
+					result += ';';
+				}
+				
+				result += cookie.toString('key-value');
+			}
+			else {
+				result += `Set-Cookie: ${cookie.toString('set-cookie')}\r\n`;
+			}
+		}
+		
+		return result;
+	}
+	
+	/** Returns an iterable for all cookies in the collection */
+	values() {
+		return (Object.values(this.#cookies) as Cookie[]).values();
+	}
+	
+	/** Returns an iterable with the key-value pairs of the name itself and the full cookie */
+	entries() {
+		return (Object.entries(this.#cookies) as [key: string, cookie: Cookie][]).values();
+	}
+	
+	/** Returns an iterable with the name of each cookie in the collection */
+	keys() {
+		return (Object.keys(this.#cookies) as string[]).values();
+	}
+	
+	[Symbol.iterator]() {
+		return (Object.values(this.#cookies) as Cookie[]).values();
+	}
+	
+	static create = create;
+	static fromHeaderValue = fromHeaderValue;
+	static fromObject = fromObject;
+	static fromEntries = fromEntries;
 }
 
 const setCookieKeyMap = {
@@ -86,130 +200,49 @@ const daysOfWeek = [
 	'Sat',
 ];
 
-const CookieCollectionProto = {
-	has(this: CookieCollection, name: string) {
-		return Boolean(this[name]);
-	},
-	add(this: CookieCollection, cookie: Cookie | string, value?: SupportedCookieValues) {
-		if (typeof cookie == 'string') {
-			cookie = {
-				name: cookie,
-				value,
-			};
-		}
-		if (!cookie || typeof cookie != 'object' || !cookie.name || !cookie.value) {
-			// TODO: replace this with something better
-			console.log(`Invalid cookie entry:`, cookie);
-			return;
-		}
-		
-		this[cookie.name] = cookie;
-	},
-	get(this: CookieCollection, name: string) {
-		return this[name];
-	},
-	remove(this: CookieCollection, name: string) {
-		delete this[name];
-	},
-	values(this: CookieCollection) {
-		return (Object.values(this) as Cookie[]).values();
-	},
-	entries(this: CookieCollection) {
-		return (Object.entries(this) as [key: string, cookie: Cookie][]).values();
-	},
-	keys(this:  CookieCollection) {
-		return (Object.keys(this) as string[]).values();
-	},
-	[Symbol.iterator](this: CookieCollection) {
-		return (Object.values(this) as Cookie[]).values();
-	},
-	constructor: function CookieCollection() {
-		throw new TypeError('This constructor is not callable or "n');
-	},
-	toString(this: CookieCollection, as?: 'cookie-header' | 'set-cookie') {
-		if (!as) {
-			return `[object ${this.contructor.name}]`;
-		}
-		
-		let result = '';
-		
-		for (const cookie of this) {
-			if (as == 'cookie-header') {
-				if (result) {
-					result += ';';
+/** this ensures that it has the correct `toString` method instead of the default */
+function ensureCookieStringifies(cookie: Partial<Cookie>) {
+	if (cookie.toString.length != 1) {
+		Reflect.defineProperty(cookie, 'toString', {
+			enumerable: false,
+			configurable: false,
+			value: function (this: Cookie, type?: 'set-cookie' | 'key-value') {
+				let result = `[object Cookie]`;
+				
+				if (type) {
+					result = `${this.name}=${this.value}`;
 				}
 				
-				result += `${cookie.name}=${cookie.value}`;
-			}
-			else {
-				result += `Set-Cookie: ${cookie.name}=${cookie.value}`;
-
-				for (const [ key, value ] of Object.entries(cookie)) {
-					if (key == 'name' || key == 'value' || !(key in setCookieKeyMap)) continue;
-					
-					if ((key == 'partitioned' || key == 'httpOnly' || key == 'secure') && !value) {
-						continue;
-					}
-					
-					result += `; ${setCookieKeyMap[key]}`;
-					
-					if (key == 'partitioned' || key == 'httpOnly' || key == 'secure') {
-						continue;
-					}
-					
-					result += '=';
-					
-					if (key == 'expires') {
-						const date = value as Date;
-						result += `${daysOfWeek[date.getUTCDay()]}, ${String(date.getUTCDate()).padStart(2, '0')} ${months[date.getUTCMonth()]} ${date.getUTCFullYear()} ${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}:${String(date.getUTCSeconds()).padStart(2, '0')} GMT`;
-					}
-					else {
-						result += value;
+				if (type === 'set-cookie') {
+					for (const [ key, value ] of Object.entries(this)) {
+						if (key == 'name' || key == 'value' || !(key in setCookieKeyMap)) continue;
+						
+						if ((key == 'partitioned' || key == 'httpOnly' || key == 'secure') && !value) {
+							continue;
+						}
+						
+						result += `; ${setCookieKeyMap[key]}`;
+						
+						if (key == 'partitioned' || key == 'httpOnly' || key == 'secure') {
+							continue;
+						}
+						
+						result += '=';
+						
+						if (key == 'expires') {
+							const date = value as Date;
+							result += `${daysOfWeek[date.getUTCDay()]}, ${String(date.getUTCDate()).padStart(2, '0')} ${months[date.getUTCMonth()]} ${date.getUTCFullYear()} ${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}:${String(date.getUTCSeconds()).padStart(2, '0')} GMT`;
+						}
+						else {
+							result += value;
+						}
 					}
 				}
 				
-				result += '\r\n';
-			}
-		}
-		
-		return result;
-	},
-	get length() {
-		return Object.keys(this).length;
-	},
-} as CookieCollectionPrototype;
-
-for (const [ key, value ] of Object.entries(CookieCollectionProto)) {
-	let getter = () => value;
-	
-	if (key == 'length') {
-		getter = function(this: CookieCollection) {
-			return Object.keys(this).length;
-		};
+				return result;
+			},
+		});
 	}
-	
-	Reflect.defineProperty(CookieCollectionProto, key, {
-		get: getter,
-		enumerable: false,
-		configurable: false,
-	});
 }
 
-interface CookieCollectionPrototype {
-	has(name: string): boolean;
-	add(cookie: Cookie): void;
-	add(key: string, value: SupportedCookieValues): void;
-	get(name: string): Cookie | undefined;
-	remove(name: string): void;
-	values(): Iterable<Cookie>;
-	entries(): Iterable<[ string, Cookie ]>;
-	keys(): Iterable<string>;
-	[Symbol.iterator](): Iterator<Cookie>;
-	readonly length: number;
-	constructor: () => void;
-	toString(as?: 'cookie-header' | 'set-cookie'): string;
-}
-
-export type CookieCollection = CookieCollectionPrototype & {
-	[key: string]: Cookie;
-};
+export default CookieCollection;
