@@ -35,10 +35,14 @@ export function fluvial(options: ApplicationOptions = {}) {
 	
 	async function Application(rawRequest: Http2ServerRequest | IncomingMessage, rawResponse: Http2ServerResponse | ServerResponse) {
 		const req = new FluvialRequest(rawRequest) as Request;
-		const res = new FluvialResponse(rawResponse) as Response;
+		// the "unknown" cast was because this doesn't seem to understand
+		// that either http1 or http2 server response is valid here, but
+		// because the FluvialResponse supports both, it's okay and will
+		// be the correct type at runtime
+		const res = new FluvialResponse(rawResponse) as unknown as Response;
 		
-		(req as Fluvial.__InternalRequest).response = res;
-		(res as Fluvial.__InternalResponse).request = req;
+		Reflect.defineProperty(req, 'response', { get() { return res; } });
+		Reflect.defineProperty(res, 'request', { get() { return req; } });
 		
 		try {
 			const result = await app.handleRequest(req.path, '/', req, res);

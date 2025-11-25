@@ -64,7 +64,7 @@ declare global {
 }
 
 export class FluvialResponse extends Writable {
-	#beforeSendCallbacks: Array<(response: this) => void | Promise<void>> = [];
+	#beforeSendCallbacks: Array<(response: ResponseSendContext) => void | Promise<void>> = [];
 	
 	get httpVersion() {
 		return this.request.httpVersion;
@@ -249,7 +249,7 @@ export class FluvialResponse extends Writable {
 		
 		if (!this.rawResponse.headersSent) {
 			for (const callback of this.#beforeSendCallbacks) {
-				await callback(this);
+				await callback({ data: null, res: this });
 			}
 			
 			if (this.httpVersion == '1.1') {
@@ -298,9 +298,13 @@ export class FluvialResponse extends Writable {
 			throw TypeError('attempted to send another response though the response stream is closed');
 		}
 		
+		const sendContext: ResponseSendContext = {
+			data: null,
+			res: this,
+		};
 		// TODO: Possibly reverse the order of the callbacks if that is the expected convention
 		for (const callback of this.#beforeSendCallbacks) {
-			await callback(this);
+			await callback(sendContext);
 		}
 		
 		if (this.httpVersion == '1.1') {
@@ -324,7 +328,7 @@ export class FluvialResponse extends Writable {
 		return this.#send();
 	}
 	
-	beforeSend(callback: (response: this) => void | Promise<void>): this {
+	beforeSend(callback: (response: ResponseSendContext) => void | Promise<void>): this {
 		this.#beforeSendCallbacks.push(callback);
 		return this;
 	}
@@ -336,9 +340,13 @@ export class FluvialResponse extends Writable {
 			this.headers['content-length'] = String(bytes.byteLength);
 		}
 		
+		const sendContext: ResponseSendContext = {
+			data,
+			res: this,
+		};
 		// TODO: Possibly reverse the order of the callbacks if that is the expected convention
 		for (const callback of this.#beforeSendCallbacks) {
-			await callback(this);
+			await callback(sendContext);
 		}
 		
 		if (this.httpVersion == '1.1') {
@@ -363,5 +371,10 @@ export class FluvialResponse extends Writable {
 		return this;
 	}
 };
+
+export interface ResponseSendContext {
+	data?: string | Buffer;
+	res: FluvialResponse;
+}
 
 export type Response = Fluvial.Http1Response | Fluvial.Http2Response;
