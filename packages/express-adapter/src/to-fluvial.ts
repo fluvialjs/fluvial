@@ -51,7 +51,7 @@ function wrapForFluvial(
 				}
 				if (property == 'url' || property == 'originalUrl') {
 					let url = target.path;
-					const query = new URLSearchParams(target.rawRequest.url);
+					const query = new URLSearchParams(target.query);
 					if (query.size) {
 						// this replacer is needed, as the default stringification adds `=` to keys without
 						// any values, which also means that some practical uses (such as vite + vue SSR
