@@ -343,7 +343,7 @@ export class FluvialResponse extends Writable implements Fluvial.__InternalRespo
 			await callback(sendContext);
 		}
 		
-		const bytes = Buffer.isBuffer(sendContext.data) ? sendContext.data : typeof data == 'string' ? Buffer.from(sendContext.data) : Buffer.from([]);
+		const bytes = Buffer.isBuffer(sendContext.data) ? sendContext.data : typeof sendContext.data == 'string' ? Buffer.from(sendContext.data) : Buffer.from([]);
 		
 		if (bytes.byteLength && !this.headers['content-length']) {
 			this.headers['content-length'] = String(bytes.byteLength);
