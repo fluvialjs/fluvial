@@ -1,3 +1,4 @@
+import { URLSearchParams } from 'node:url';
 import { Request as ExpressRequest, Response as ExpressResponse, NextFunction } from 'express';
 import { Request as FluvialRequest, Response as FluvialResponse } from 'fluvial';
 
@@ -49,7 +50,12 @@ function wrapForFluvial(
 					return target.payload || {};
 				}
 				if (property == 'url' || property == 'originalUrl') {
-					return target.path;
+					let url = target.path;
+					const query = new URLSearchParams(target.query);
+					if (query.size) {
+						url += `?${query}`;
+					}
+					return url;
 				}
 				
 				if (property in target) {
