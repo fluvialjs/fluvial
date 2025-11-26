@@ -51,9 +51,13 @@ function wrapForFluvial(
 				}
 				if (property == 'url' || property == 'originalUrl') {
 					let url = target.path;
-					const query = new URLSearchParams(target.query);
+					const query = new URLSearchParams(target.rawRequest.url);
 					if (query.size) {
-						url += `?${query}`;
+						// this replacer is needed, as the default stringification adds `=` to keys without
+						// any values, which also means that some practical uses (such as vite + vue SSR
+						// doesn't catch that the requested module as derived from a `.vue` file should be
+						// interpreted or sent over as a `.css` module)
+						url += `?${query.toString().replace(/=(&|$)/g, (_, match) => match || '')}`;
 					}
 					return url;
 				}
